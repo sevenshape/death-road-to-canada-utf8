@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 
+//dllexport start
 
 HMODULE steam_wrapperModule = NULL;
 
@@ -58,6 +59,8 @@ __declspec(dllexport) int steam_api_store_stats()
     return real_steam_api_store_stats();
 }
 
+//dllexport end
+
 char *btn_str_u;
 DWORD btn_str_u_cpy;
 wchar_t btn_str_s[65535];
@@ -84,27 +87,30 @@ char *get_btn_str_u(char *str)
     size_t end_marker_len = strlen(end_marker);
 
     char *start = strstr(btn_str_u, start_marker);
+    if(start && start[1]=='\0'){
+        sprintf(btn_str_u, "`%s", str);
+        start=btn_str_u;
+    }
     while (start)
     {
         char *end = strstr(start + start_marker_len, end_marker);
         if (!end)
         {
+            int len = strlen(start);
+            for (int i = 0; i < len/3; i++)
+            {
+                start[i]='\x10';
+                if(i+1 >= len/3){
+                    start[++i]='\xE7';
+                    start[++i]='\0';
+                }
+            }
+            return btn_str_u;
             break;
         }
-        int count = 0;
-        int len = (end - start - start_marker_len);
-        for (int i = 1; i < len + 1; i++)
-        {
-            if (start[i] < 0)
-            {
-                i += 2;
-            }
-            count++;
-        }
-
-
 
         //start
+        int len = (end - start - start_marker_len);
         char *us = (char *) malloc((len + 1) * sizeof(char));
         strncpy(us, start + start_marker_len, len);  // 从源字符串中复制
         us[len] = '\0';  // 确保字符串以 '\0' 结束
@@ -114,6 +120,8 @@ char *get_btn_str_u(char *str)
         free(us);
         btn_str_s_p += us_w_len - 1;
         //end
+
+        int count = us_w_len-1;
 
         for (int i = 0; i < count; i++)
         {
@@ -126,68 +134,6 @@ char *get_btn_str_u(char *str)
     }
 
     return btn_str_u;
-}
-
-void drawCNString(const char *str, float x, float y, float w, float h)
-{
-    int len, i;
-    float text_line;
-    wchar_t *wstring;
-    HDC hDC = wglGetCurrentDC();
-    GLuint list = glGenLists(1);
-
-    float font_h = 32.0f;
-    float font_w = 7.0f;
-
-
-    HFONT hFont = CreateFont(
-            (int) font_h,                // 字体高度
-            (int) font_w,                 // 字体宽度
-            0, 0,                  // 不使用倾斜
-            FW_NORMAL,             // 正常字体粗细
-            FALSE, FALSE, FALSE,   // 不使用斜体、下划线和删除线
-            DEFAULT_CHARSET,       // 使用默认字符集
-            OUT_DEFAULT_PRECIS,    // 默认输出精度
-            CLIP_DEFAULT_PRECIS,   // 默认裁剪精度
-            DEFAULT_QUALITY,       // 默认品质
-            DEFAULT_PITCH | FF_DONTCARE, // 默认音高和字体系列
-            "Arial"               // 字体名
-    );
-    //设置字体
-    HGDIOBJ oldObject = SelectObject(hDC, hFont);
-
-    len = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
-    wstring = (wchar_t *) malloc(sizeof(wchar_t) * len);
-    MultiByteToWideChar(CP_UTF8, 0, str, -1, wstring, len);
-
-    // 取消纹理映射
-    glDisable(GL_TEXTURE_2D);
-    text_line = 1.0f;
-    glRasterPos2f(x - w / 2 + font_w, y - h / 2 + font_h);
-    glColor3f(1.0f, 1.0f, 1.0f);  // 第二个浮点数无效, 所有这里设置红色
-    // 逐个输出字符
-    for (i = 0; i < len; ++i)
-    {
-        GLfloat rasterPos[4];
-        glGetFloatv(GL_CURRENT_RASTER_POSITION, rasterPos);
-        if (rasterPos[0] > (x - w / 2 + w - font_w * 2))
-        {
-            ++text_line;
-            glRasterPos2f(x - w / 2 + font_w, y - h / 2 + font_h * text_line);
-        }
-
-        wglUseFontBitmapsW(hDC, wstring[i], 1, list);
-        glCallList(list);
-    }
-
-    // 回收所有临时资源
-    free(wstring);
-    glDeleteLists(list, 1);
-    glEnable(GL_TEXTURE_2D);
-    // 当你不再需要这个字体时，你应该先将原来的对象重新选回设备上下文
-    SelectObject(hDC, oldObject);
-    // 然后，删除字体对象
-    DeleteObject(hFont);
 }
 
 void draw_btn_s(wchar_t wchar, double x, double y)
@@ -235,17 +181,6 @@ void draw_btn_s(wchar_t wchar, double x, double y)
 
 void my_SDL_GL_SwapWindow(SDL_Window *window)
 {
-    /*int btn_count = *(int*)0x006C92E0;
-    for (int i = 0; i < btn_count; i++) {
-        float x = btn_arr_x[i];
-        float y = btn_arr_y[i];
-        char* str = btn_arr_str[i];
-        float w = btn_arr_w[i];
-        float h = btn_arr_h[i];
-
-        drawCNString(str, x, y, w, h);
-    }*/
-
     for (int i = 0; i < btn_str_s_xy_p; i++)
     {
         draw_btn_s(btn_str_s[i], btn_str_s_xy[i][0], btn_str_s_xy[i][1]);
@@ -254,32 +189,6 @@ void my_SDL_GL_SwapWindow(SDL_Window *window)
     btn_str_s_p = 0;
 
     SDL_GL_SwapWindow(window);
-}
-
-int __cdecl my_button_init(int a1)
-{
-    void (__cdecl *v1)(int, DWORD); // eax
-    typedef int(__cdecl *FuncType)(int, DWORD);
-    FuncType button_set_text = (FuncType) 0x0041C9C0;
-
-    v1 = *(void (__cdecl **)(int, DWORD)) (a1 + 228);
-    if (v1)
-        v1(a1, 0);
-    //v2 = *(int(__cdecl **)(int, int))(0x0041C9C0);
-    //return v2(a1, *(DWORD*)(a1 + 200));
-
-    float x = *((float *) a1 + 4) + *((float *) a1 + 6);
-    float y = *((float *) a1 + 5) + *((float *) a1 + 7);
-    //float x = *((float *)a1 + 43) * *((float *)a1 + 41);
-    //float y = *((float *)a1 + 44) * *((float *)a1 + 42);
-    char *Str = *(char **) (a1 + 200);
-    float w = *(float *) (a1 + 32);
-    float h = *(float *) (a1 + 36);
-
-
-    int btn_count = *(int *) 0x006C92E0;
-
-    return button_set_text(a1, *(DWORD *) (a1 + 200));
 }
 
 void jmp_rep(LPVOID address, LPVOID new_address)
@@ -305,301 +214,6 @@ void jmp_rep(LPVOID address, LPVOID new_address)
 
     // 恢复内存保护
     VirtualProtect((LPVOID) address, 5, oldProtect, NULL);
-}
-
-void __cdecl my_buttons_draw_ex(int a1, int a2)
-{
-    int (__cdecl *turtle_set_angle)(double) = (int (__cdecl *)(double)) 0x00409C60;
-    long double (*mad_w)() = (long double (*)()) 0x00404E00;
-
-    long double (*mad_h)() = (long double (*)()) 0x00404E20;
-
-    void (__cdecl *turtle_set_pos_unscaled)(double, double) =
-    (void (__cdecl *)(double, double)) 0x00409CA0;
-
-    void (__cdecl *turtle_set_scalex)(double) =
-    (void (__cdecl *)(double)) 0x00409D00;
-
-    void (__cdecl *turtle_set_scaley)(double) =
-    (void (__cdecl *)(double)) 0x00409D10;
-
-    void (__cdecl *turtle_set_rgba)(float, float, float, float) =
-    (void (__cdecl *)(float, float, float, float)) 0x00409D20;
-
-    int (__cdecl *sprite_batch_plot)(int, int, int) =
-    (int (__cdecl *)(int, int, int)) 0x00406460;
-
-    long double (*mad_seconds)() = (long double (*)()) 0x00404C60;
-
-    long double (__cdecl *mad_lerp)(float, float, float) =
-    (long double (__cdecl *)(float, float, float)) 0x00404C80;
-
-    int (__cdecl *glyphs_batch_plot_ex)(DWORD *, unsigned __int8 *, int, int, int) =
-    (int (__cdecl *)(DWORD *, unsigned __int8 *, int, int, int)) 0x00403630;
-
-    int (__cdecl *glyphs_batch_plot)(DWORD *, char *, int, int) =
-    (int (__cdecl *)(DWORD *, char *, int, int)) 0x004038B0;
-
-    double turtle = *(double *) 0x004D00C0;
-    int sprites__0 = *(int *) 0x006C92CC;
-    int font_ = *(int *) 0x006C92D0;
-    int btn_count = *(int *) 0x006C92E0;
-    int *btns = (int *) 0x006C9300;
-    float fade_ = *(float *) 0x004D01F8;
-    float *_sine_table = (float *) 0x0094C920;
-
-    int v2; // edi
-    int *v3; // ebx
-    long double v4; // fst7
-    long double v5; // fst6
-    long double v6; // fst6
-    int v7; // esi
-    long double v8; // fst7
-    long double v9; // fst6
-    long double v10; // fst7
-    int v11; // esi
-    long double v12; // fst7
-    int (__cdecl *v13)(int *, int); // eax
-    long double v14; // fst6
-    long double v15; // fst5
-    long double v16; // fst6
-    char v17; // al
-    long double v18; // fst7
-    int (__cdecl *v19)(int *, int); // eax
-    char *v20; // eax
-    int v21; // ecx
-    long double v22; // fst7
-    long double v23; // fst7
-    long double v24; // fst7
-    float v25; // [esp+8h] [ebp-D4h]
-    float v26; // [esp+Ch] [ebp-D0h]
-    float v27; // [esp+Ch] [ebp-D0h]
-    float v28; // [esp+Ch] [ebp-D0h]
-    float v29; // [esp+Ch] [ebp-D0h]
-    float v30; // [esp+Ch] [ebp-D0h]
-    float v31; // [esp+Ch] [ebp-D0h]
-    float v32; // [esp+Ch] [ebp-D0h]
-    float v33; // [esp+Ch] [ebp-D0h]
-    float v34; // [esp+20h] [ebp-BCh]
-    double v35; // [esp+20h] [ebp-BCh]
-    float v36; // [esp+20h] [ebp-BCh]
-    float v37; // [esp+20h] [ebp-BCh]
-    float v38; // [esp+20h] [ebp-BCh]
-    float v39; // [esp+28h] [ebp-B4h]
-    float v40; // [esp+28h] [ebp-B4h]
-    float v41; // [esp+28h] [ebp-B4h]
-    float v42; // [esp+28h] [ebp-B4h]
-    float v43; // [esp+28h] [ebp-B4h]
-    float v44; // [esp+28h] [ebp-B4h]
-    float v45; // [esp+28h] [ebp-B4h]
-    double v46; // [esp+28h] [ebp-B4h]
-    float v47; // [esp+30h] [ebp-ACh]
-    float v48; // [esp+30h] [ebp-ACh]
-    float v49; // [esp+38h] [ebp-A4h]
-    float v50; // [esp+44h] [ebp-98h]
-    float v51; // [esp+44h] [ebp-98h]
-    float v52; // [esp+48h] [ebp-94h]
-    int v53; // [esp+4Ch] [ebp-90h]
-    int v54; // [esp+50h] [ebp-8Ch]
-    float v55; // [esp+5Ch] [ebp-80h]
-    float v56; // [esp+5Ch] [ebp-80h]
-    float v57; // [esp+5Ch] [ebp-80h]
-    float v58; // [esp+5Ch] [ebp-80h]
-    char v59[96]; // [esp+60h] [ebp-7Ch] BYREF
-
-    memcpy(v59, &turtle, sizeof(v59));
-    v54 = sprites__0;
-    if (a1)
-    {
-        if (sprites__0)
-            goto LABEL_3;
-    } else
-    {
-        turtle_set_angle(0.0);
-        if (v54)
-            goto LABEL_3;
-    }
-    if (!font_)
-        return;
-    v54 = *(DWORD *) (font_ + 12);
-    LABEL_3:
-    v2 = 0;
-    if (btn_count > 0)
-    {
-        while (1)
-        {
-            if (a2)
-            {
-                if (a2 <= v2)
-                    goto LABEL_37;
-                v2 = a2;
-            }
-            v3 = &btns[84 * v2];
-            v4 = *((float *) v3 + 4) + *((float *) v3 + 6);
-            v5 = 1.0;
-            if (!*((BYTE *) v3 + 160))
-                v5 = 1.0 - *((float *) v3 + 37) * *((float *) v3 + 38);
-            v39 = v5;
-            v6 = *((float *) v3 + 8);
-            if (v4 + v6 < 0.0)
-                goto LABEL_36;
-            v7 = v3[2];
-            v49 = *((float *) v3 + 5);
-            v53 = v3[82];
-            v50 = *((float *) v3 + 7);
-            v52 = v4;
-            v47 = v4 - v6;
-            if (v47 > mad_w())
-                goto LABEL_36;
-            v8 = *((float *) v3 + 5) + *((float *) v3 + 7);
-            v9 = *((float *) v3 + 9);
-            if ((float) 0.0 > v8 + v9)
-                goto LABEL_36;
-            v34 = v8 - v9;
-            if (v34 > mad_h())
-                goto LABEL_36;
-            v10 = v49 + v50;
-            if (v7 <= 0)
-            {
-                v14 = v10;
-                v12 = v52;
-                v35 = v14;
-            } else
-            {
-                v48 = v39;
-                v35 = v10;
-                turtle_set_pos_unscaled(v52, v10);
-                v11 = v54 + 32 * v7;
-                v40 = (*((float *) v3 + 11) + *((float *) v3 + 11)) / (long double) *(__int16 *) (v11 + 14);
-                v55 = (*((float *) v3 + 10) + *((float *) v3 + 10)) / (long double) *(__int16 *) (v11 + 12);
-                turtle_set_scalex(v55 * v48);
-                turtle_set_scaley(v48 * v40);
-                if (*((BYTE *) v3 + 189))
-                {
-                    v32 = *((float *) v3 + 31) * fade_;
-                    turtle_set_rgba(*((float *) v3 + 28), *((float *) v3 + 29), *((float *) v3 + 30), v32);
-                    v12 = v52;
-                } else
-                {
-                    if (*((BYTE *) v3 + 188))
-                    {
-                        v29 = *((float *) v3 + 23) * fade_;
-                        turtle_set_rgba(*((float *) v3 + 20), *((float *) v3 + 21), *((float *) v3 + 22), v29);
-                    } else
-                    {
-                        v26 = *((float *) v3 + 19) * fade_;
-                        turtle_set_rgba(*((float *) v3 + 16), *((float *) v3 + 17), *((float *) v3 + 18), v26);
-                    }
-                    v12 = v52;
-                }
-                v13 = (int (__cdecl *)(int *, int)) v3[57];
-                if (!v13 || (v41 = v12, v12 = v41, !v13(&btns[84 * v2], 6)))
-                {
-                    v42 = v12;
-                    sprite_batch_plot(v11, 0, *((char *) v3 + 144));
-                    v12 = v42;
-                }
-            }
-            v15 = 1.0;
-            v16 = 1.0 - *((float *) v3 + 37) * *((float *) v3 + 38);
-            if (!*((BYTE *) v3 + 160))
-                v15 = v16;
-            v17 = *((BYTE *) v3 + 193);
-            if (!v17)
-                break;
-            if (v17 == 2)
-            {
-                v43 = v16;
-                turtle_set_pos_unscaled(v12 + v15 * *((float *) v3 + 10), v35);
-                v18 = v43;
-                goto LABEL_27;
-            }
-            v44 = v16;
-            turtle_set_pos_unscaled(v12, v35);
-            v18 = v44;
-            if (!*((BYTE *) v3 + 160))
-            {
-                LABEL_40:
-                v36 = v18;
-                turtle_set_scalex(v18 * *((float *) v3 + 43) * *((float *) v3 + 41));
-                turtle_set_scaley(v36 * *((float *) v3 + 44) * *((float *) v3 + 42));
-                if (*((BYTE *) v3 + 189))
-                {
-                    v30 = *((float *) v3 + 35) * fade_;
-                    turtle_set_rgba(*((float *) v3 + 32), *((float *) v3 + 33), *((float *) v3 + 34), v30);
-                } else if (*((BYTE *) v3 + 188))
-                {
-                    v28 = *((float *) v3 + 27) * fade_;
-                    turtle_set_rgba(*((float *) v3 + 24), *((float *) v3 + 25), *((float *) v3 + 26), v28);
-                } else
-                {
-                    v33 = *((float *) v3 + 15) * fade_;
-                    turtle_set_rgba(*((float *) v3 + 12), *((float *) v3 + 13), *((float *) v3 + 14), v33);
-                }
-                goto LABEL_31;
-            }
-            LABEL_28:
-            if (v18 < 1.0)
-            {
-                v56 = 0.5 * _sine_table[(int) (mad_seconds() * 1460.0 * 22.755556) & 0x1FFF] + 0.5;
-                v51 = v56;
-                v46 = 0.5;
-                v57 = v46 *
-                      _sine_table[(int) ((mad_seconds() * (double) 1460.0 + 120.0) * (double) 22.755556) & 0x1FFF] +
-                      v46;
-                v37 = v57;
-                v58 = v46 + v46 * _sine_table[(int) ((mad_seconds() * (double) 1460.0 + 240.0) * (double) 22.755556) &
-                                              0x1FFF];
-                v22 = *((float *) v3 + 37);
-                mad_lerp(*((float *) v3 + 37), *((float *) v3 + 12), v51);
-                *(float *) &v46 = v22;
-                v23 = *((float *) v3 + 37);
-                mad_lerp(*((float *) v3 + 37), *((float *) v3 + 13), v37);
-                v38 = v23;
-                v24 = *((float *) v3 + 37);
-                mad_lerp(*((float *) v3 + 37), *((float *) v3 + 14), v58);
-                v31 = *((float *) v3 + 15) * fade_;
-                v25 = v24;
-                turtle_set_rgba(*(float *) &v46, v38, v25, v31);
-            } else
-            {
-                v27 = *((float *) v3 + 15) * fade_;
-                turtle_set_rgba(*((float *) v3 + 12), *((float *) v3 + 13), *((float *) v3 + 14), v27);
-            }
-            turtle_set_scalex(*((float *) v3 + 43) * *((float *) v3 + 41));
-            turtle_set_scaley(*((float *) v3 + 44) * *((float *) v3 + 42));
-            LABEL_31:
-            v19 = (int (__cdecl *)(int *, int)) v3[57];
-            if (v19 && v19(&btns[84 * v2], 7))
-                goto LABEL_36;
-            v20 = (char *) v3[50];
-            if (!v20)
-                goto LABEL_36;
-            v21 = v3[51];
-            if (v21)
-            {
-                glyphs_batch_plot_ex((DWORD *) v53, v20, v21, *((char *) v3 + 193), *((char *) v3 + 145));
-                LABEL_36:
-                if (btn_count <= ++v2)
-                    goto LABEL_37;
-            } else
-            {
-                ++v2;
-                glyphs_batch_plot((DWORD *) v53, v20, *((char *) v3 + 193), *((char *) v3 + 145));
-                if (btn_count <= v2)
-                    goto LABEL_37;
-            }
-        }
-        v45 = v16;
-        turtle_set_pos_unscaled(v12 - v15 * *((float *) v3 + 10), v35);
-        v18 = v45;
-        LABEL_27:
-        if (!*((BYTE *) v3 + 160))
-            goto LABEL_40;
-        goto LABEL_28;
-    }
-    LABEL_37:
-    memcpy(&turtle, v59, 0x60u);
 }
 
 int __cdecl my_main_btn_wrap(int a1, int a2)
