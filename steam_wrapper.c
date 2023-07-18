@@ -80,14 +80,70 @@ BYTE layout_more_constprop_8_jmp[5];
 //jmp end
 
 //font start
-double font_h = 30.0f;
+/*double font_h = 30.0f;
 double font_w = 10.0f;
+double font_x_offset = 1.0f;
+double font_y_offset = 0.25f;*/
+double font_h = 10.0f;
+double font_w = 10.0f;
+double font_x_offset = 1.0f;
+double font_y_offset = 1.0f;
 
 HFONT hFont;
 
 void font_set()
 {
-    hFont = CreateFont(
+    int result = AddFontResource("Silver.ttf");
+    if(result > 0)
+    {
+        // 字体添加成功，可以使用CreateFont来创建字体对象
+        /*hFont = CreateFont(
+                -MulDiv(36, GetDeviceCaps(wglGetCurrentDC(), LOGPIXELSY), 72),                // 字体高度
+                0,                 // 字体宽度
+                0, 0,                  // 不使用倾斜
+                FW_NORMAL,             // 正常字体粗细
+                FALSE, FALSE, FALSE,   // 不使用斜体、下划线和删除线
+                DEFAULT_CHARSET,       // 使用默认字符集
+                OUT_TT_ONLY_PRECIS,    // 默认输出精度
+                CLIP_DEFAULT_PRECIS,   // 默认裁剪精度
+                NONANTIALIASED_QUALITY,       // 默认品质
+                DEFAULT_PITCH | FF_DONTCARE, // 默认音高和字体系列
+                "Silver"               // 字体名
+        );
+        SelectObject(wglGetCurrentDC(), hFont);*/
+        /*LOGFONT lf;
+        memset(&lf, 0, sizeof(LOGFONT));
+        lf.lfHeight = -MulDiv(24, GetDeviceCaps(wglGetCurrentDC(), LOGPIXELSY), 72); // 24 点字体
+        strcpy(lf.lfFaceName, "Silver"); // 字体名字为 "Silver"
+        lf.lfOutPrecision = OUT_TT_ONLY_PRECIS; // 输出精度为 TrueType only
+        hFont = CreateFontIndirect(&lf);
+        SelectObject(wglGetCurrentDC(), hFont);*/
+//        HDC hdc = wglGetCurrentDC(); // 获取屏幕设备环境
+//        int nHeight = -MulDiv(30, GetDeviceCaps(hdc, LOGPIXELSY), 72); // 转换字体大小为像素值
+        hFont = CreateFont(
+                -38,              // 字体高度
+                0,                    // 字体宽度
+                0,                    // 字体倾斜的角度
+                0,                    // 字体底线的角度
+                FW_NORMAL,            // 字体的粗细
+                FALSE,                // 是否斜体
+                FALSE,                // 是否带下划线
+                FALSE,                // 是否带删除线
+                DEFAULT_CHARSET,         // 字符集
+                OUT_TT_PRECIS,        // 输出精度
+                CLIP_TT_ALWAYS,  // 剪切精度
+                CLEARTYPE_QUALITY,      // 输出质量
+                DEFAULT_PITCH | FF_DONTCARE,  // 字体间距和族名
+                "Silver"        // 字体名
+        );
+        SelectObject(wglGetCurrentDC(), hFont);
+    }
+    else
+    {
+        // 字体添加失败，处理错误
+        MessageBox(NULL, "steam_wrapper error: Silver.ttf not find", "", MB_OK);
+    }
+    /*hFont = CreateFont(
             (int) font_h,                // 字体高度
             (int) font_w,                 // 字体宽度
             0, 0,                  // 不使用倾斜
@@ -100,7 +156,7 @@ void font_set()
             DEFAULT_PITCH | FF_DONTCARE, // 默认音高和字体系列
             "Arial"               // 字体名
     );
-    SelectObject(wglGetCurrentDC(), hFont);
+    SelectObject(wglGetCurrentDC(), hFont);*/
 }
 
 void font_reset()
@@ -342,8 +398,8 @@ void draw_btn_s(wchar_t wchar, double x, double y)
     HDC hDC = wglGetCurrentDC();
     GLuint list = glGenLists(1);
 
-    x -= font_w;
-    y += font_h / 4;
+    x -= font_w * font_x_offset;
+    y += font_h * font_y_offset;
 
     if (!hFont)
         font_set();
@@ -363,7 +419,7 @@ void draw_btn_s(wchar_t wchar, double x, double y)
 
 void my_SDL_GL_SwapWindow(SDL_Window *window)
 {
-    for (int i = 0; i < *btn_count; i++)
+    /*for (int i = 0; i < *btn_count; i++)
     {
         int btn = (int)&btns[84 * i];
         char *str = *(char **) (btn + 200);
@@ -377,7 +433,7 @@ void my_SDL_GL_SwapWindow(SDL_Window *window)
     }
 //        if(str)
 //            printf("%s\n", str);
-    }
+    }*/
     for (int i = 0; i < btn_str_s_xy_p; i++)
     {
 //        if(btn_str_s[i]!='\x0')
@@ -717,6 +773,10 @@ int __cdecl my_main_btn_default(int a1, int a2)
             //start
             btn_str_s_p_cpy = btn_str_s_p;
             btn_str_u = get_btn_str_u(*(char **) (a1 + 200));
+//            if (*(char **) (a1 + 200) && strstr(*(char **) (a1 + 200), "HONK"))
+//            {
+//                printf("a");
+//            }
             //end
             v8 = btn_str_u;
             result = 1;
@@ -786,10 +846,10 @@ int __cdecl my_main_btn_image_wrap(int a1, int a2)
     btn_str_s_p_cpy = btn_str_s_p;
     btn_str_s_xy_p_cpy = btn_str_s_xy_p;
     btn_str_u = get_btn_str_u(*(char **) (a1 + 200));
-    if (strstr(*(char **) (a1 + 200), "\xE7\x85\x8E"))
-    {
-        printf("a");
-    }
+//    if (strstr(*(char **) (a1 + 200), "HONK"))
+//    {
+//        printf("a");
+//    }
     //end
 
     int v2; // eax
@@ -1218,8 +1278,13 @@ char *__cdecl my_float_text_draw(int a1)
 char *__cdecl my_plot_text_wrapped_ex(char *a1, char *a2, int a3, int a4, int a5, int a6)
 {
 //    start
+
     btn_str_s_p_cpy = btn_str_s_p;
     btn_str_u = get_btn_str_u(a1);
+//    if (strstr(a1, "HONK"))
+//    {
+//        printf("a");
+//    }
 //    end
 
     long double v6; // fst7
@@ -1240,6 +1305,13 @@ char *__cdecl my_plot_text_wrapped_ex(char *a1, char *a2, int a3, int a4, int a5
         result = v9;
     }
     while ( v9 );
+    //start
+    //浮动字体有些不会打印
+    if(btn_str_s_p>btn_str_s_xy_p)
+    {
+        btn_str_s_p = btn_str_s_xy_p;
+    }
+    //end
     return result;
 }
 
@@ -1410,8 +1482,8 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     switch (ul_reason_for_call)
     {
         case DLL_PROCESS_ATTACH:
-            AllocConsole();
-            freopen("CONOUT$", "w", stdout);
+//            AllocConsole();
+//            freopen("CONOUT$", "w", stdout);
 
             btn_str_u = (char *) malloc(196605 * sizeof(char));
             btn_str_u_cpy = (DWORD) btn_str_u;
@@ -1443,7 +1515,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 
             //jmp_rep((LPVOID)0x004039F0, my_glyphs_w);
 
-            jmp_rep((LPVOID) 0x0041CB30, my_button_init);
+//            jmp_rep((LPVOID) 0x0041CB30, my_button_init);
 
             //jmp_rep((LPVOID)0x00403630, my_glyphs_batch_plot_ex);
 
