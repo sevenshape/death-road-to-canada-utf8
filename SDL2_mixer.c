@@ -1,64 +1,45 @@
-#include <GL/gl.h>
 #include <SDL.h>
 #include <SDL_syswm.h>
 #include <stdbool.h>
 #include <math.h>
 #include <stdio.h>
 #include <malloc.h>
+#include <SDL2/SDL_mixer.h>
+#include <SDL_ttf.h>
+#include <SDL_image.h>
+#include <SDL_opengl.h>
 
 //dllexport start
 
 HMODULE SDL2_mixer_module = NULL;
 
-//steam_api_init
-typedef int (*steam_api_init_type)();
+void (*real_Mix_CloseAudio)(void) = NULL;
+void (*real_Mix_FreeMusic)(Mix_Music *music) = NULL;
+Mix_Music* (*real_Mix_LoadMUS)(const char *file) = NULL;
+int (*real_Mix_OpenAudio)(int frequency, Uint16 format, int channels, int chunksize) = NULL;
+void (*real_Mix_Pause)(int channel) = NULL;
+void (*real_Mix_PauseMusic)(void) = NULL;
+int (*real_Mix_PlayMusic)(Mix_Music *music, int loops) = NULL;
+int (*real_Mix_RegisterEffect)(int chan, Mix_EffectFunc_t f, Mix_EffectDone_t d, void *arg) = NULL;
+void (*real_Mix_Resume)(int channel) = NULL;
+void (*real_Mix_ResumeMusic)(void) = NULL;
+void (*real_Mix_RewindMusic)(void) = NULL;
+int (*real_Mix_SetMusicPosition)(double position) = NULL;
+int (*real_Mix_VolumeMusic)(int volume) = NULL;
 
-extern steam_api_init_type real_steam_api_init;
-
-//steam_api_persona_name
-typedef int (*steam_api_persona_name_type)();
-
-extern steam_api_persona_name_type real_steam_api_persona_name;
-
-//steam_api_set_achievement
-typedef int (*steam_api_set_achievement_type)();
-
-extern steam_api_set_achievement_type real_steam_api_set_achievement;
-
-//steam_api_store_stats
-typedef int (*steam_api_store_stats_type)();
-
-extern steam_api_store_stats_type real_steam_api_store_stats;
-
-steam_api_init_type real_steam_api_init = NULL;
-steam_api_persona_name_type real_steam_api_persona_name = NULL;
-steam_api_set_achievement_type real_steam_api_set_achievement = NULL;
-steam_api_store_stats_type real_steam_api_store_stats = NULL;
-
-
-//steam_api_init
-//steam_api_persona_name
-//steam_api_set_achievement
-//steam_api_store_stats
-__declspec(dllexport) int steam_api_init()
-{
-    return real_steam_api_init();
-}
-
-__declspec(dllexport) int steam_api_persona_name()
-{
-    return real_steam_api_persona_name();
-}
-
-__declspec(dllexport) int steam_api_set_achievement()
-{
-    return real_steam_api_set_achievement();
-}
-
-__declspec(dllexport) int steam_api_store_stats()
-{
-    return real_steam_api_store_stats();
-}
+__declspec(dllexport) void Mix_CloseAudio(void){return real_Mix_CloseAudio();}
+__declspec(dllexport) void Mix_FreeMusic(Mix_Music *music){return real_Mix_FreeMusic(music);}
+__declspec(dllexport) Mix_Music* Mix_LoadMUS(const char *file){return real_Mix_LoadMUS(file);}
+__declspec(dllexport) int Mix_OpenAudio(int frequency, Uint16 format, int channels, int chunksize){return real_Mix_OpenAudio(frequency, format, channels, chunksize);}
+__declspec(dllexport) void Mix_Pause(int channel){return real_Mix_Pause(channel);}
+__declspec(dllexport) void Mix_PauseMusic(void){return real_Mix_PauseMusic();}
+__declspec(dllexport) int Mix_PlayMusic(Mix_Music *music, int loops){return real_Mix_PlayMusic(music, loops);}
+__declspec(dllexport) int Mix_RegisterEffect(int chan, Mix_EffectFunc_t f, Mix_EffectDone_t d, void *arg){return real_Mix_RegisterEffect(chan, f, d, arg);}
+__declspec(dllexport) void Mix_Resume(int channel){return real_Mix_Resume(channel);}
+__declspec(dllexport) void Mix_ResumeMusic(void){return real_Mix_ResumeMusic();}
+__declspec(dllexport) void Mix_RewindMusic(void){return real_Mix_RewindMusic();}
+__declspec(dllexport) int Mix_SetMusicPosition(double position){return real_Mix_SetMusicPosition(position);}
+__declspec(dllexport) int Mix_VolumeMusic(int volume){return real_Mix_VolumeMusic(volume);}
 
 //dllexport end
 
@@ -68,6 +49,8 @@ wchar_t btn_str_s[65535];
 int btn_str_s_p = 0;
 double btn_str_s_xy[65535][2];
 int btn_str_s_xy_p = 0;
+
+char utf8_str[196605];
 
 int btn_str_s_p_cpy = 0;
 int btn_str_s_p_cpy_more = 0;
@@ -91,35 +74,14 @@ double font_y_offset = 1.0f;
 
 HFONT hFont;
 
+TTF_Font *ttf_font;
+SDL_Renderer *ttf_renderer;
+
 void font_set()
 {
     int result = AddFontResource("Silver.ttf");
     if(result > 0)
     {
-        // 字体添加成功，可以使用CreateFont来创建字体对象
-        /*hFont = CreateFont(
-                -MulDiv(36, GetDeviceCaps(wglGetCurrentDC(), LOGPIXELSY), 72),                // 字体高度
-                0,                 // 字体宽度
-                0, 0,                  // 不使用倾斜
-                FW_NORMAL,             // 正常字体粗细
-                FALSE, FALSE, FALSE,   // 不使用斜体、下划线和删除线
-                DEFAULT_CHARSET,       // 使用默认字符集
-                OUT_TT_ONLY_PRECIS,    // 默认输出精度
-                CLIP_DEFAULT_PRECIS,   // 默认裁剪精度
-                NONANTIALIASED_QUALITY,       // 默认品质
-                DEFAULT_PITCH | FF_DONTCARE, // 默认音高和字体系列
-                "Silver"               // 字体名
-        );
-        SelectObject(wglGetCurrentDC(), hFont);*/
-        /*LOGFONT lf;
-        memset(&lf, 0, sizeof(LOGFONT));
-        lf.lfHeight = -MulDiv(24, GetDeviceCaps(wglGetCurrentDC(), LOGPIXELSY), 72); // 24 点字体
-        strcpy(lf.lfFaceName, "Silver"); // 字体名字为 "Silver"
-        lf.lfOutPrecision = OUT_TT_ONLY_PRECIS; // 输出精度为 TrueType only
-        hFont = CreateFontIndirect(&lf);
-        SelectObject(wglGetCurrentDC(), hFont);*/
-//        HDC hdc = wglGetCurrentDC(); // 获取屏幕设备环境
-//        int nHeight = -MulDiv(30, GetDeviceCaps(hdc, LOGPIXELSY), 72); // 转换字体大小为像素值
         hFont = CreateFont(
                 -38,              // 字体高度
                 0,                    // 字体宽度
@@ -143,23 +105,21 @@ void font_set()
         // 字体添加失败，处理错误
         MessageBox(NULL, "steam_wrapper error: Silver.ttf not find", "", MB_OK);
     }
-    /*hFont = CreateFont(
-            (int) font_h,                // 字体高度
-            (int) font_w,                 // 字体宽度
-            0, 0,                  // 不使用倾斜
-            FW_NORMAL,             // 正常字体粗细
-            FALSE, FALSE, FALSE,   // 不使用斜体、下划线和删除线
-            DEFAULT_CHARSET,       // 使用默认字符集
-            OUT_DEFAULT_PRECIS,    // 默认输出精度
-            CLIP_DEFAULT_PRECIS,   // 默认裁剪精度
-            DEFAULT_QUALITY,       // 默认品质
-            DEFAULT_PITCH | FF_DONTCARE, // 默认音高和字体系列
-            "Arial"               // 字体名
-    );
-    SelectObject(wglGetCurrentDC(), hFont);*/
+
+    //ttf
+    IMG_Init(IMG_INIT_PNG);
+    if (TTF_Init() == -1) {
+        printf("TTF_Init: %s\n", TTF_GetError());
+    }
+
+    // 加载字体
+    ttf_font = TTF_OpenFont("Silver.ttf", 36);
+    if (ttf_font == NULL) {
+        printf("TTF_OpenFont: %s\n", TTF_GetError());
+    }
 }
 
-void font_reset()
+void font_free()
 {
     // 设回默认字体
     SelectObject(wglGetCurrentDC(), GetStockObject(DEFAULT_GUI_FONT));
@@ -296,7 +256,21 @@ long double (__cdecl *particle_pre_draw_and_fade)(int) = (long double (__cdecl *
 int (__cdecl *game_set_turtle_lighting_for_pos_ex)(float, float, float, float) = (int (__cdecl *)(float, float, float, float)) 0x0044A0E0;
 char* (__cdecl *plot_text_wrapped_ex)(char*, char*, int, int, int, int) = (char* (__cdecl *)(char*, char*, int, int, int, int)) 0x00476600;
 
-//idapro全局属性
+int* display_h = (int*)0x004D0128;
+int* display_w = (int*)0x004D012C;
+
+//idapro全局属性 end
+
+size_t utf8_strlen(const char* s) {
+    size_t len = 0;
+    while (*s) {
+        if ((*s & 0xc0) != 0x80) {  // 如果此字节不是后续字节
+            len++;
+        }
+        s++;
+    }
+    return len;
+}
 
 char *get_btn_str_u(char *str)
 {
@@ -372,13 +346,13 @@ char *get_btn_str_u(char *str)
         strncpy(us, start + start_marker_len, len);  // 从源字符串中复制
         us[len] = '\0';  // 确保字符串以 '\0' 结束
 
-        int us_w_len = MultiByteToWideChar(CP_UTF8, 0, us, -1, NULL, 0);
+        int us_w_len = utf8_strlen(us);
         MultiByteToWideChar(CP_UTF8, 0, us, -1, btn_str_s + btn_str_s_p, us_w_len);
         free(us);
-        btn_str_s_p += us_w_len - 1;
+        btn_str_s_p += us_w_len ;
         //end
 
-        int count = us_w_len - 1;
+        int count = us_w_len ;
 
         for (int i = 0; i < count; i++)
         {
@@ -391,6 +365,52 @@ char *get_btn_str_u(char *str)
     }
 
     return btn_str_u;
+}
+
+const char* utf8_index(const char* s, size_t pos) {
+    size_t i = 0;
+
+    while (*s) {
+        // 到达所求位置，返回当前字符的指针
+        if (i == pos) {
+            return s;
+        }
+
+        // 如果当前字节是一个新字符的开始，增加字符计数器
+        if ((*s & 0xc0) != 0x80) {
+            i++;
+        }
+
+        // 移动到下一个字节
+        s++;
+    }
+
+    // 如果位置超出字符串长度，返回NULL
+    if (i < pos) {
+        return NULL;
+    }
+
+    // 返回指向字符串终止字符的指针
+    return s;
+}
+
+void CreateFontDisplayList(TTF_Font* font, const char* character, GLuint listBase) {
+    // 使用SDL_ttf创建一个位图
+    SDL_Color color = { 255, 255, 255, 255 };
+    SDL_Surface* surface = TTF_RenderUTF8_Solid(font, character, color);
+
+    // 将SDL_Surface转换为一个适合OpenGL使用的像素格式
+    SDL_Surface* conv_surface = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
+
+    // 为当前的字符创建一个显示列表
+    glNewList(listBase, GL_COMPILE);
+    glPixelZoom(1, -1);
+    glDrawPixels(conv_surface->w, conv_surface->h, GL_RGBA, GL_UNSIGNED_BYTE, conv_surface->pixels);
+    glPixelZoom(1, 1);  // 恢复像素缩放
+    glEndList();
+
+    SDL_FreeSurface(conv_surface);
+    SDL_FreeSurface(surface);
 }
 
 void draw_btn_s(wchar_t wchar, double x, double y)
@@ -410,15 +430,31 @@ void draw_btn_s(wchar_t wchar, double x, double y)
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     // 逐个输出字符
     wglUseFontBitmapsW(hDC, wchar, 1, list);
+//    CreateFontDisplayList(ttf_font, "你好", list);
     glCallList(list);
 
     // 回收所有临时资源
     glDeleteLists(list, 1);
     glEnable(GL_TEXTURE_2D);
+
+    /*GLuint list_b = glGenLists(1);
+    glDisable(GL_TEXTURE_2D);
+    glRasterPos2f(x, y);
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    CreateFontDisplayList(ttf_font,"测试",list_b);
+    glPushMatrix();
+    glCallList(1000 );
+    glPopMatrix();
+    glDeleteLists(list_b, 1);
+    glEnable(GL_TEXTURE_2D);*/
 }
 
 void my_SDL_GL_SwapWindow(SDL_Window *window)
 {
+    /*if(ttf_renderer == NULL)
+    {
+        ttf_renderer = SDL_GetRenderer(window);
+    }*/
     /*for (int i = 0; i < *btn_count; i++)
     {
         int btn = (int)&btns[84 * i];
@@ -808,16 +844,6 @@ int __cdecl my_main_btn_default(int a1, int a2)
     }
 }
 
-int __cdecl my_main_btn_range(int a1, int a2)
-{
-    return 1;
-}
-
-int __cdecl my_main_btn_slider(int a1, int a2)
-{
-    return 1;
-}
-
 int __cdecl my_main_btn_image_wrap(int a1, int a2)
 {
     int (__cdecl *main_btn_framed)(int a1, int a2) = (int (__cdecl *)(int, int)) 0x0047AAB0;
@@ -1124,157 +1150,6 @@ int my_layout_more_constprop_8()
     return result;
 }
 
-int __cdecl my_button_init(int a1)
-{
-    void (__cdecl *v1)(int, DWORD); // eax
-    typedef int(__cdecl *FuncType)(int, DWORD);
-    FuncType button_set_text = (FuncType) 0x0041C9C0;
-
-    v1 = *(void (__cdecl **)(int, DWORD)) (a1 + 228);
-    if (v1)
-        v1(a1, 0);
-//    char *p = strstr((char *) a2, "\xE7\x85\x8E");
-//    if (p)
-//    {
-//        void *ret_addr;
-//        __asm__("movl 4(%%ebp), %0" : "=r"(ret_addr));
-//        printf("Return address is %p\n", ret_addr);
-//    }
-//    if(more_flag && *btn_count==more_btn_count+1)
-//    {
-//        if((*(char **) (a1 + 200))[0]=='?')
-//        {
-//            more_btn_count++;
-//        }else
-//        {
-//            btn_str_u = get_btn_str_u(*(char **) (a1 + 200));
-//            btn_str_s_p=0;
-//            a1_200 = *(char **)(a1 + 200);
-//            a1_200_p = (char **)(a1 + 200);
-//            *(char **)(a1 + 200) = btn_str_u;
-//            more_rep_flag=true;
-//        }
-//    }
-
-    return button_set_text(a1, *(DWORD *) (a1 + 200));
-}
-
-int __cdecl my_plot_text(char *a1, char *a2)
-{
-    return 1;
-//    char *p = strstr((char *) a2, "\xE7\x85\x8E");
-//    if (p)
-//    {
-//        void *ret_addr;
-//        __asm__("movl 4(%%ebp), %0" : "=r"(ret_addr));
-//        printf("Return address is %p\n", ret_addr);
-//    }
-    return plot_text_ex(a1, a2, 1, font6x8);
-}
-
-int __cdecl my_plot_text_noshadow(char *a1, int a2) { return 1; }
-
-void __cdecl my_buttons_draw_ex(int a1, int a2) {}
-
-int my_plot_textf(int a1, char *Format, ...) { return 1; }
-
-int __cdecl my_main_sprite_batches_draw_ex(int a1) { return 1; }
-char *__cdecl my_float_text_draw(int a1)
-{
-    /*int v1; // eax
-    void *v2; // esp
-    void *v3; // esp
-    size_t v4; // esi
-    long double v5; // fst7
-    long double v6; // fst6
-    long double v7; // fst7
-    __int16 v8; // ax
-    __int16 v9; // ax
-    __int16 v10; // ax
-    __int16 v11; // ax
-    float v13; // [esp+8h] [ebp-B0h]
-    float v14; // [esp+Ch] [ebp-ACh]
-    char Destination[16]; // [esp+18h] [ebp-A0h] BYREF
-    float v16; // [esp+28h] [ebp-90h]
-    float v17; // [esp+2Ch] [ebp-8Ch]
-    float v18; // [esp+30h] [ebp-88h]
-    int v19; // [esp+34h] [ebp-84h]
-    __int16 v20; // [esp+38h] [ebp-80h]
-    __int16 v21; // [esp+3Ah] [ebp-7Eh]
-    char v22[96]; // [esp+40h] [ebp-78h] BYREF
-
-    v1 = 16 * ((unsigned int) (*(DWORD * )(a1 + 116) + 16) >> 4);
-    v2 = alloca(v1);
-    v3 = alloca(v1);
-    v19 = (int) Destination;
-    particle_pre_draw_and_fade(a1);
-    v4 = *(DWORD * )(a1 + 116);
-    strncpy(Destination, *(const char **) (a1 + 220), v4);
-    v5 = *(float *) (a1 + 88);
-    Destination[v4] = 0;
-    v6 = v5;
-    if (v5 != 0.0)
-    {
-        v7 = *(float *) (a1 + 100);
-        LABEL_5:
-        v14 = v6;
-        v13 = v7;
-        game_set_turtle_lighting_for_pos_ex(*(float *) (a1 + 20), *(float *) (a1 + 24), v13, v14);
-        goto LABEL_6;
-    }
-    v7 = *(float *) (a1 + 100);
-    if (v7 != 0.0)
-        goto LABEL_5;
-    LABEL_6:
-    memcpy(v22, &turtle, sizeof(v22));
-    v16 = -1.0;
-    v17 = 1.0;
-    turtle_trans(1.0, -1.0);
-    *((unsigned char*)v8) = v21;
-    *glypher_shadow = 1;
-    v8 = (v8 & 0x00FF) | (12 << 8);
-    v20 = v8;
-    flt_4D0110 = flt_4D0110 * 0.0;
-    flt_4D0114 = flt_4D0114 * 0.0;
-    v18 = 0.0;
-    flt_4D0118 = 0.0 * flt_4D0118;
-    plot_text_wrapped_ex((char *) v19, *(char **) (a1 + 224), 0, (int) ((long double) *scaled_w * 0.5), 1,
-                         (int) &font6x8);
-    memcpy(&turtle, v22, 0x60u);
-    turtle_trans(v17, v18);
-    *((unsigned char*)v9) = v21;
-    HIBYTE(v9) = 12;
-    v20 = v9;
-    flt_4D0110 = 0.215 * flt_4D0110;
-    flt_4D0114 = 0.185 * flt_4D0114;
-    v18 = 0.25;
-    flt_4D0118 = 0.25 * flt_4D0118;
-    plot_text_wrapped_ex((char *) v19, *(char **) (a1 + 224), 0, (int) ((long double) *scaled_w * 0.5), 1,
-                         (int) &font6x8);
-    memcpy(&turtle, v22, 0x60u);
-    flt_4D0110 = 0.215 * flt_4D0110;
-    flt_4D0114 = 0.185 * flt_4D0114;
-    flt_4D0118 = v18 * flt_4D0118;
-    turtle_move(v16);
-    *((unsigned char*)v10) = v21;
-    HIBYTE(v10) = 12;
-    v20 = v10;
-    plot_text_wrapped_ex((char *) v19, *(char **) (a1 + 224), 0, (int) ((long double) *scaled_w * 0.5), 1,
-                         (int) &font6x8);
-    *glypher_shadow = 0;
-    memcpy(&turtle, v22, 0x60u);
-    *((unsigned char*)v11) = v21;
-    HIBYTE(v11) = 12;
-    v20 = v11;
-    return plot_text_wrapped_ex(
-            (char *) v19,
-            *(char **) (a1 + 224),
-            0,
-            (int) ((long double) *scaled_w * 0.5),
-            1,
-            (int) &font6x8);*/
-
-}
 char *__cdecl my_plot_text_wrapped_ex(char *a1, char *a2, int a3, int a4, int a5, int a6)
 {
 //    start
@@ -1489,25 +1364,28 @@ BOOL APIENTRY DllMain(HMODULE hModule,
             btn_str_u_cpy = (DWORD) btn_str_u;
             btn_str_long_text = (char *) malloc(196605 * sizeof(char));
 
-            // 加载原DLL，获取真正的Direct3DCreate9地址
-            SDL2_mixer_module = LoadLibrary("real_steam_wrapper.dll");
-            //steam_api_init
-            //steam_api_persona_name
-            //steam_api_set_achievement
-            //steam_api_store_stats
-            real_steam_api_init = (steam_api_init_type) GetProcAddress(SDL2_mixer_module, "steam_api_init");
-            real_steam_api_persona_name = (steam_api_persona_name_type) GetProcAddress(SDL2_mixer_module,
-                                                                                       "steam_api_persona_name");
-            real_steam_api_set_achievement = (steam_api_set_achievement_type) GetProcAddress(SDL2_mixer_module,
-                                                                                             "steam_api_set_achievement");
-            real_steam_api_store_stats = (steam_api_store_stats_type) GetProcAddress(SDL2_mixer_module,
-                                                                                     "steam_api_store_stats");
-            if (real_steam_api_init == NULL)
+            // 加载原DLL，获取真正的SDL2_mixer地址
+            SDL2_mixer_module = LoadLibrary("real_SDL2_mixer.dll");
+
+            real_Mix_CloseAudio = (void (*)(void)) GetProcAddress(SDL2_mixer_module, "Mix_CloseAudio");
+            real_Mix_FreeMusic = (void (*)(Mix_Music *)) GetProcAddress(SDL2_mixer_module, "Mix_FreeMusic");
+            real_Mix_LoadMUS = (Mix_Music *(*)(const char *)) GetProcAddress(SDL2_mixer_module, "Mix_LoadMUS");
+            real_Mix_OpenAudio = (int (*)(int, Uint16, int, int)) GetProcAddress(SDL2_mixer_module, "Mix_OpenAudio");
+            real_Mix_Pause = (void (*)(int)) GetProcAddress(SDL2_mixer_module, "Mix_Pause");
+            real_Mix_PauseMusic = (void (*)(void)) GetProcAddress(SDL2_mixer_module, "Mix_PauseMusic");
+            real_Mix_PlayMusic = (int (*)(Mix_Music *, int)) GetProcAddress(SDL2_mixer_module, "Mix_PlayMusic");
+            real_Mix_RegisterEffect = (int (*)(int, Mix_EffectFunc_t, Mix_EffectDone_t, void *)) GetProcAddress(SDL2_mixer_module, "Mix_RegisterEffect");
+            real_Mix_Resume = (void (*)(int)) GetProcAddress(SDL2_mixer_module, "Mix_Resume");
+            real_Mix_ResumeMusic = (void (*)(void)) GetProcAddress(SDL2_mixer_module, "Mix_ResumeMusic");
+            real_Mix_RewindMusic = (void (*)(void)) GetProcAddress(SDL2_mixer_module, "Mix_RewindMusic");
+            real_Mix_SetMusicPosition = (int (*)(double)) GetProcAddress(SDL2_mixer_module, "Mix_SetMusicPosition");
+            real_Mix_VolumeMusic = (int (*)(int)) GetProcAddress(SDL2_mixer_module, "Mix_VolumeMusic");
+
+            if (real_Mix_CloseAudio == NULL)
             {
-                MessageBox(NULL, "steam_wrapper error: real_steam_wrapper.dll not find", "", MB_OK);
+                printf("SDL2_mixer error: real_SDL2_mixer.dll not find");
                 return FALSE;
             }
-
 
             //jmp_rep((LPVOID)0x004C7F38, my_glDrawElements);
 
