@@ -4,11 +4,11 @@
 #include <math.h>
 #include <stdio.h>
 #include <malloc.h>
-#include <SDL2/SDL_mixer.h>
 #include <SDL_opengl.h>
 #include <wchar.h>
 #include <ctype.h>
 #include "NERVE SEP-27-2022.07.43.h"
+#include "SDL_mixer.h"
 
 #include <libintl.h>
 #include <locale.h>
