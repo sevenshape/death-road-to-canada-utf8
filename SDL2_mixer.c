@@ -5,12 +5,18 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <SDL2/SDL_mixer.h>
-#include <SDL_ttf.h>
-#include <SDL_image.h>
 #include <SDL_opengl.h>
+#include <wchar.h>
+#include <ctype.h>
+#include "NERVE SEP-27-2022.07.43.h"
 
-//dllexport start
+#include <libintl.h>
+#include <locale.h>
 
+#define _(STRING) gettext(STRING)
+
+//start
+//dllexport
 HMODULE SDL2_mixer_module = NULL;
 
 void (*real_Mix_CloseAudio)(void) = NULL;
@@ -40,50 +46,36 @@ __declspec(dllexport) void Mix_ResumeMusic(void){return real_Mix_ResumeMusic();}
 __declspec(dllexport) void Mix_RewindMusic(void){return real_Mix_RewindMusic();}
 __declspec(dllexport) int Mix_SetMusicPosition(double position){return real_Mix_SetMusicPosition(position);}
 __declspec(dllexport) int Mix_VolumeMusic(int volume){return real_Mix_VolumeMusic(volume);}
-
-//dllexport end
+//end
 
 char *btn_str_u;
-DWORD btn_str_u_cpy;
-wchar_t btn_str_s[65535];
+wchar_t btn_str_s[4095];
 int btn_str_s_p = 0;
-double btn_str_s_xy[65535][2];
+double btn_str_s_xy[4095][2];
 int btn_str_s_xy_p = 0;
 
-char utf8_str[196605];
+char *str_rep_temp;
 
-int btn_str_s_p_cpy = 0;
-int btn_str_s_p_cpy_more = 0;
-int btn_str_s_xy_p_cpy = 0;
+char *str_result_temp;
 
-char *btn_str_long_text;
-
-//jmp start
-BYTE layout_more_constprop_8_jmp[5];
-//jmp end
-
-//font start
-/*double font_h = 30.0f;
-double font_w = 10.0f;
-double font_x_offset = 1.0f;
-double font_y_offset = 0.25f;*/
-double font_h = 10.0f;
-double font_w = 10.0f;
-double font_x_offset = 1.0f;
+//start
+//font
+double font_h = 4.0f;
+double font_w = 4.0f;
+double font_x_offset = 3.0f;
 double font_y_offset = 1.0f;
 
 HFONT hFont;
 
-TTF_Font *ttf_font;
-SDL_Renderer *ttf_renderer;
-
 void font_set()
 {
-    int result = AddFontResource("Silver.ttf");
+    int result = AddFontResource("Zpix.ttf");
     if(result > 0)
     {
+//        HDC hdc = wglGetCurrentDC(); // 获取屏幕设备环境
+//        int nHeight = -MulDiv(30, GetDeviceCaps(wglGetCurrentDC(), LOGPIXELSY), 72); // 转换字体大小为像素值
         hFont = CreateFont(
-                -38,              // 字体高度
+                -23,              // 字体高度
                 0,                    // 字体宽度
                 0,                    // 字体倾斜的角度
                 0,                    // 字体底线的角度
@@ -96,7 +88,7 @@ void font_set()
                 CLIP_TT_ALWAYS,  // 剪切精度
                 CLEARTYPE_QUALITY,      // 输出质量
                 DEFAULT_PITCH | FF_DONTCARE,  // 字体间距和族名
-                "Silver"        // 字体名
+                "Zpix"        // 字体名
         );
         SelectObject(wglGetCurrentDC(), hFont);
     }
@@ -104,18 +96,6 @@ void font_set()
     {
         // 字体添加失败，处理错误
         MessageBox(NULL, "steam_wrapper error: Silver.ttf not find", "", MB_OK);
-    }
-
-    //ttf
-    IMG_Init(IMG_INIT_PNG);
-    if (TTF_Init() == -1) {
-        printf("TTF_Init: %s\n", TTF_GetError());
-    }
-
-    // 加载字体
-    ttf_font = TTF_OpenFont("Silver.ttf", 36);
-    if (ttf_font == NULL) {
-        printf("TTF_OpenFont: %s\n", TTF_GetError());
     }
 }
 
@@ -127,360 +107,10 @@ void font_free()
     if (hFont)
         DeleteObject(hFont);
 }
+//end
 
-//font end
-//idapro全局属性
-void (__cdecl *turtle_trans)(double a1, double a2) =
-(void (__cdecl *)(double, double)) 0x00409F10;
-
-int (__cdecl *sprite_batch_plot)(int, int, int) =
-(int (__cdecl *)(int, int, int)) 0x00406460;
-
-char *(__cdecl *sprite_get)(__int16 a1) =
-(char *(__cdecl *)(__int16)) 0x00406930;
-
-double *turtle = (double *) 0x004D00C0;
-float *flt_4D0118 = (float *) 0x004D0118;
-float *flt_4D0114 = (float *) 0x004D0114;
-float *flt_4D011C = (float *) 0x004D011C;
-float *flt_4D0110 = (float *) 0x004D0110;
-
-long double
-(__cdecl *glyph_h)(DWORD *a1, unsigned __int8 a2) = (long double (__cdecl *)(DWORD *,
-                                                                             unsigned __int8)) 0x004039B0;
-
-char *
-(__cdecl *wrap_text_ex)(const char **a1, int a2, unsigned int a3, int a4) = (char *(__cdecl *)(const char **,
-                                                                                               int,
-                                                                                               unsigned int,
-                                                                                               int)) 0x00476080;
-
-
-int (__cdecl *main_btn_framed)(int a1, int a2) = (int (__cdecl *)(int, int)) 0x0047AAB0;
-
-int (__cdecl *wrap_text_lines)(const char *a1, unsigned int a2) = (int (__cdecl *)(const char *,
-                                                                                   unsigned int)) 0x00476510;
-
-int (__cdecl *turtle_move)(double a1) = (int (__cdecl *)(double)) 0x00409F60;
-
-int
-(__cdecl *plot_text_ex)(char *a1, char *a2, int a3, int a4) = (int (__cdecl *)(char *, char *, int, int)) 0x00474840;
-
-int (__cdecl *sound_pip)(float, int) = (int (__cdecl *)(float, int)) 0x004AEDE0;
-
-long double (__cdecl *frnd)(float, float) = (long double (__cdecl *)(float, float)) 0x00405CD0;
-
-long double (*rndsign)() = (long double (*)()) 0x00405E10;
-
-BOOL (__cdecl *main_is_cursor_hover)(float *) = (BOOL (__cdecl *)(float *)) 0x00478D40;
-
-long double (*mad_h)() = (long double (*)()) 0x00404E20;
-
-BOOL (__cdecl *cursors_disable)(int) = (BOOL (__cdecl *)(int)) 0x00431820;
-
-int (*main_buttons_start)() = (int (*)()) 0x004768F0;
-
-float *(*button_box)() = (float *(*)()) 0x0041C770;
-
-int
-(__cdecl *game_screen_title_ex)(char *, int, const char *) = (int (__cdecl *)(char *, int, const char *)) 0x00450D90;
-
-int (__cdecl *main_set_default_start_button)(int) = (int (__cdecl *)(int)) 0x00475050;
-
-int (__cdecl *game_screen_title)(char *) = (int (__cdecl *)(char *)) 0x00450E90;
-
-DWORD *(__cdecl *game_lower_box)(DWORD *) = (DWORD *(__cdecl *)(DWORD *)) 0x00450D30;
-
-DWORD *(__cdecl *game_full_box)(DWORD *) = (DWORD *(__cdecl *)(DWORD *)) 0x00450CF0;
-
-void (__cdecl *button_set_layout)(float, float) = (void (__cdecl *)(float, float)) 0x0041C7F0;
-
-int *(__cdecl *button_ex)(float, float, int, int, int) = (int *(__cdecl *)(float, float, int, int, int)) 0x0041CB70;
-
-int (__cdecl *button_init)(int) = (int (__cdecl *)(int)) 0x0041CB30;
-
-int (__cdecl *main_calc_image_wrap_lines)(int, DWORD *, DWORD *) = (int (__cdecl *)(int, DWORD *, DWORD *)) 0x004762C0;
-
-int (__cdecl *cursors_reset_nearest)(float, float) = (int (__cdecl *)(float, float)) 0x004327B0;
-
-int (__cdecl *cyoa_push_popup_state_btn)(int, int) = (int (__cdecl *)(int, int)) 0x00432E90;
-
-int (__cdecl *cyoa_btn_choice)(int, int) = (int (__cdecl *)(int, int)) 0x004329E0;
-
-int (__cdecl *cyoa_more_btn)(int, int) = (int (__cdecl *)(int, int)) 0x004337A0;
-
-int (__cdecl *draw_icon)(int, int) = (int (__cdecl *)(int, int)) 0x00432ED0;
-
-int (__cdecl *cyoa_btn_image_wrap)(int, int) = (int (__cdecl *)(int, int)) 0x00432FD0;
-
-int (__cdecl *main_set_default_back_button)(int) = (int (__cdecl *)(int)) 0x00475060;
-
-
-float *flt_4D048C = (float *) 0x004D048C;
-float *flt_4D0498 = (float *) 0x004D0498;
-float *flt_4D0490 = (float *) 0x004D0490;
-float *flt_4D0494 = (float *) 0x004D0494;
-
-int font6x8 = 0x00A39D04;
-
-float *global_scale = (float *) 0x004D04AC;
-float *gui_rumble = (float *) 0x0086B834;
-float *gui_rumble_decay = (float *) 0x0086CA1C;
-float *gui_rumble_reset = (float *) 0x0086CA18;
-
-int *dword_95B6B4 = (int *) 0x0095B6B4;
-int *dword_95CC54 = (int *) 0x0095CC54;
-int *dword_95CC64 = (int *) 0x0095CC64;
-int *dword_95CA4C = (int *) 0x0095CA4C;
-int *dword_95CA54 = (int *) 0x0095CA54;
-int *dword_95CC34 = (int *) 0x0095CC34;
-int *dword_95CA50 = (int *) 0x0095CA50;
-int *dword_95B6B8 = (int *) 0x0095B6B8;
-int *dword_95CA5C = (int *) 0x0095CA5C;
-int *dword_95CC3C = (int *) 0x0095CC3C;
-
-char *cyoa_info = (char *) 0x0095B660;
-char *Destination = (char *) 0x0095B689;
-char *Str = (char *) 0x0095CA44;
-
-int *textbox = (int *) 0x0079CB60;
-
-__int64 *word_95CA64 = (__int64 *) 0x0095CA64;
-int *btn_count = (int *) 0x006C92E0;
-int *btns = (int *) 0x006C9300;
-int *scaled_w = (int *)0x0086B940;
-int *glypher_shadow = (int *)0x007CAA38;
-
-int (*layout_more_constprop_8)() = (int (*)()) 0x00433390;
-long double (__cdecl *particle_pre_draw_and_fade)(int) = (long double (__cdecl *)(int)) 0x0041F710;
-int (__cdecl *game_set_turtle_lighting_for_pos_ex)(float, float, float, float) = (int (__cdecl *)(float, float, float, float)) 0x0044A0E0;
-char* (__cdecl *plot_text_wrapped_ex)(char*, char*, int, int, int, int) = (char* (__cdecl *)(char*, char*, int, int, int, int)) 0x00476600;
-
-int* display_h = (int*)0x004D0128;
-int* display_w = (int*)0x004D012C;
-
-//idapro全局属性 end
-
-size_t utf8_strlen(const char* s) {
-    size_t len = 0;
-    while (*s) {
-        if ((*s & 0xc0) != 0x80) {  // 如果此字节不是后续字节
-            len++;
-        }
-        s++;
-    }
-    return len;
-}
-
-char *get_btn_str_u(char *str)
-{
-    btn_str_u = (char *) btn_str_u_cpy;
-    if (((uintptr_t) btn_str_u & 0x00F00000) == 0x00400000 || btn_str_u == NULL)
-    {
-        btn_str_u = (char *) btn_str_u_cpy;
-    }
-    if (str == NULL || strlen(str) < 3)
-        return str;
-
-    char *long_text_start = strstr(btn_str_long_text, str);
-    if (long_text_start)
-    {
-        //如果显示的是长文本内的文本, 如果`号数为奇数就在开头加`号
-        int p_count = 0;
-        for (int i = 0; i < strlen(str); i++)
-        {
-            if (str[i] == '`')
-            {
-                p_count++;
-            }
-        }
-        if (p_count % 2 != 0)
-        {
-            sprintf(btn_str_u, "`%s", str);
-        } else
-        {
-            strcpy(btn_str_u, str);
-        }
-    } else
-    {
-        strcpy(btn_str_u, str);  // 创建一个str的拷贝
-    }
-
-    const char *start_marker = "`";
-    const char *end_marker = "`";
-    size_t start_marker_len = strlen(start_marker);
-    size_t end_marker_len = strlen(end_marker);
-
-//    if(btn_str_u[0]=='\xE5' || btn_str_u[1]=='\xE5'){
-//        printf("cs");
-//    }
-
-    char *start = strstr(btn_str_u, start_marker);
-
-//    if(start && start[1]=='\x0'){
-//        sprintf(btn_str_u, "`%s", str);
-//        start = btn_str_u;
-//    }
-
-    while (start)
-    {
-        char *end = strstr(start + start_marker_len, end_marker);
-        if (!end)
-        {
-            int len = strlen(start);
-            for (int i = 0; i < len / 3; i++)
-            {
-                start[i] = '\x10';
-                if (i + 1 >= len / 3)
-                {
-                    start[++i] = '\xE7';
-                    start[++i] = '\0';
-                }
-            }
-            return btn_str_u;
-        }
-
-        //start
-        int len = (end - start - start_marker_len);
-        char *us = (char *) malloc((len + 1) * sizeof(char));
-        strncpy(us, start + start_marker_len, len);  // 从源字符串中复制
-        us[len] = '\0';  // 确保字符串以 '\0' 结束
-
-        int us_w_len = utf8_strlen(us);
-        MultiByteToWideChar(CP_UTF8, 0, us, -1, btn_str_s + btn_str_s_p, us_w_len);
-        free(us);
-        btn_str_s_p += us_w_len ;
-        //end
-
-        int count = us_w_len ;
-
-        for (int i = 0; i < count; i++)
-        {
-            start[i] = '\xE8';
-        }
-
-        memmove(start + count, end + end_marker_len, strlen(end + end_marker_len) + 1);
-
-        start = strstr(start + count, start_marker);
-    }
-
-    return btn_str_u;
-}
-
-const char* utf8_index(const char* s, size_t pos) {
-    size_t i = 0;
-
-    while (*s) {
-        // 到达所求位置，返回当前字符的指针
-        if (i == pos) {
-            return s;
-        }
-
-        // 如果当前字节是一个新字符的开始，增加字符计数器
-        if ((*s & 0xc0) != 0x80) {
-            i++;
-        }
-
-        // 移动到下一个字节
-        s++;
-    }
-
-    // 如果位置超出字符串长度，返回NULL
-    if (i < pos) {
-        return NULL;
-    }
-
-    // 返回指向字符串终止字符的指针
-    return s;
-}
-
-void CreateFontDisplayList(TTF_Font* font, const char* character, GLuint listBase) {
-    // 使用SDL_ttf创建一个位图
-    SDL_Color color = { 255, 255, 255, 255 };
-    SDL_Surface* surface = TTF_RenderUTF8_Solid(font, character, color);
-
-    // 将SDL_Surface转换为一个适合OpenGL使用的像素格式
-    SDL_Surface* conv_surface = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
-
-    // 为当前的字符创建一个显示列表
-    glNewList(listBase, GL_COMPILE);
-    glPixelZoom(1, -1);
-    glDrawPixels(conv_surface->w, conv_surface->h, GL_RGBA, GL_UNSIGNED_BYTE, conv_surface->pixels);
-    glPixelZoom(1, 1);  // 恢复像素缩放
-    glEndList();
-
-    SDL_FreeSurface(conv_surface);
-    SDL_FreeSurface(surface);
-}
-
-void draw_btn_s(wchar_t wchar, double x, double y)
-{
-    HDC hDC = wglGetCurrentDC();
-    GLuint list = glGenLists(1);
-
-    x -= font_w * font_x_offset;
-    y += font_h * font_y_offset;
-
-    if (!hFont)
-        font_set();
-
-    // 取消纹理映射
-    glDisable(GL_TEXTURE_2D);
-    glRasterPos2f(x, y);
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    // 逐个输出字符
-    wglUseFontBitmapsW(hDC, wchar, 1, list);
-//    CreateFontDisplayList(ttf_font, "你好", list);
-    glCallList(list);
-
-    // 回收所有临时资源
-    glDeleteLists(list, 1);
-    glEnable(GL_TEXTURE_2D);
-
-    /*GLuint list_b = glGenLists(1);
-    glDisable(GL_TEXTURE_2D);
-    glRasterPos2f(x, y);
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    CreateFontDisplayList(ttf_font,"测试",list_b);
-    glPushMatrix();
-    glCallList(1000 );
-    glPopMatrix();
-    glDeleteLists(list_b, 1);
-    glEnable(GL_TEXTURE_2D);*/
-}
-
-void my_SDL_GL_SwapWindow(SDL_Window *window)
-{
-    /*if(ttf_renderer == NULL)
-    {
-        ttf_renderer = SDL_GetRenderer(window);
-    }*/
-    /*for (int i = 0; i < *btn_count; i++)
-    {
-        int btn = (int)&btns[84 * i];
-        char *str = *(char **) (btn + 200);
-        if(!str)continue;
-        char *p = strstr(str, "\xE7\x85\x8E");
-    if (p)
-    {
-        void *ret_addr;
-        __asm__("movl 4(%%ebp), %0" : "=r"(ret_addr));
-        printf("Return address is %p\n", ret_addr);
-    }
-//        if(str)
-//            printf("%s\n", str);
-    }*/
-    for (int i = 0; i < btn_str_s_xy_p; i++)
-    {
-//        if(btn_str_s[i]!='\x0')
-        draw_btn_s(btn_str_s[i], btn_str_s_xy[i][0], btn_str_s_xy[i][1]);
-    }
-    btn_str_s_xy_p = 0;
-    btn_str_s_p = 0;
-
-    SDL_GL_SwapWindow(window);
-}
-
+//start
+//jmp util
 void jmp_rep(LPVOID address, LPVOID new_address)
 {
     DWORD jmpOffset;
@@ -519,675 +149,75 @@ void reset_jmp_rep(LPVOID address, BYTE *layout_more_constprop_8)
     // 恢复内存保护
     VirtualProtect((LPVOID) address, 5, oldProtect, NULL);
 }
+//end
 
-int __cdecl my_main_btn_wrap(int a1, int a2)
-{
-    int (__cdecl *main_btn_framed)(int a1, int a2) = (int (__cdecl *)(int, int)) 0x0047AAB0;
-    long double
-    (__cdecl *glyph_h)(DWORD *a1, unsigned __int8 a2) = (long double (__cdecl *)(DWORD *, unsigned __int8)) 0x004039B0;
-    int (__cdecl *wrap_text_lines)(const char *a1, unsigned int a2) = (int (__cdecl *)(const char *,
-                                                                                       unsigned int)) 0x00476510;
-    char *
-    (__cdecl *wrap_text_ex)(const char **a1, int a2, unsigned int a3, int a4) = (char *(__cdecl *)(const char **, int,
-                                                                                                   unsigned int,
-                                                                                                   int)) 0x00476080;
-    int (__cdecl *turtle_move)(double a1) = (int (__cdecl *)(double)) 0x00409F60;
-    void (__cdecl *turtle_trans)(double a1, double a2) = (void (__cdecl *)(double, double)) 0x00409F10;
-    int (__cdecl *plot_text_ex)(char *a1, char *a2, int a3, int a4) = (int (__cdecl *)(char *, char *, int,
-                                                                                       int)) 0x00474840;
-
-    float *global_scale = (float *) 0x004D04AC;
-    int font6x8 = 0x00A39D04;
-    //start
-    btn_str_s_p_cpy = btn_str_s_p;
-    btn_str_u = get_btn_str_u(*(char **) (a1 + 200));
-    //end
-
-    long double v3; // fst7
-    int v4; // esi
-    int v5; // edi
-    int v6; // esi
-    long double v7; // fst7
-    char v8; // dl
-    char *v9; // eax
-    double v10; // [esp+8h] [ebp-44h]
-    float v11; // [esp+18h] [ebp-34h]
-    float v12; // [esp+18h] [ebp-34h]
-    char *v13; // [esp+3Ch] [ebp-10h] BYREF
-
-
-    if (a2 == 5)
-    {
-        goto LABEL_6;
-    }
-    if (a2 != 7)
-    {
-        if (a2)
-        {
-            //start
-            if (btn_str_s_p > btn_str_s_xy_p)
-            {
-                btn_str_s_p = btn_str_s_p_cpy;
-            }
-            //end
-            return main_btn_framed(a1, a2);
+char* utf8_str_rep(const wchar_t * s) {
+    int s_len = wcslen(s);
+    str_rep_temp[s_len] = '\0';
+    int len = 0;
+    while (*s) {
+        if (*s < 256) {
+            str_rep_temp[len] = (char)*s;
+        }else{
+            str_rep_temp[len] = '\xE8';
         }
 
-        *(DWORD *) (a1 + 252) = 12;
-        LABEL_6:
-        *(float *) (a1 + 164) = 1.0;
-        *(float *) (a1 + 168) = 1.0;
-        //start
-        if (btn_str_s_p > btn_str_s_xy_p)
-        {
-            btn_str_s_p = btn_str_s_p_cpy;
-        }
-        //end
-        return main_btn_framed(a1, a2);
+        len++;
+        s++;
     }
-    v3 = *(float *) (a1 + 32) / *global_scale;
-    v13 = btn_str_u;
-    v4 = (__int64) (v3 - (long double) *(int *) (a1 + 252));
-    v5 = v4;
-    v11 = glyph_h((DWORD *) font6x8, *v13) + 1.0;
-    v6 = wrap_text_lines(btn_str_u, v4) - 1;
-    if (*(DWORD *) (a1 + 236))
-    {
-        turtle_move((double) (int) (*(float *) (a1 + 44) / *global_scale - 12.0));
-        v7 = 0.0;
-    } else
-    {
-        v7 = 0.5;
-    }
-    v8 = *(BYTE *) (a1 + 193);
-    v10 = v7 * ((long double) v6 * v11);
-    if (v8)
-    {
-        if (v8 == 2)
-            turtle_trans((double) (*(DWORD *) (a1 + 252) / -2), v10);
-        else
-            turtle_trans(0.0, v10);
-    } else
-    {
-        turtle_trans((double) (*(DWORD *) (a1 + 252) / 2), v10);
-    }
-    v13 = btn_str_u;
 
-    if (v13)
-    {
-        v12 = -v11;
-        do
-        {
-            v9 = (char *) wrap_text_ex(&v13, font6x8, v5, 0);
-            if (!v9)
-                break;
-            plot_text_ex(v9, (char *) *(char *) (a1 + 193), 1, font6x8);
-            turtle_trans(0.0, v12);
-        } while (v13);
-    }
-    //start
-    if (btn_str_s_p > btn_str_s_xy_p)
-    {
-        btn_str_s_p = btn_str_s_p_cpy;
-    }
-    //end
-    return 1;
+    return str_rep_temp;
 }
 
-int __cdecl my_main_btn_default(int a1, int a2)
-{
-    int (__cdecl *plot_text_ex)(char *a1, char *a2, int a3, int a4) = (int (__cdecl *)(char *, char *, int,
-                                                                                       int)) 0x00474840;
-    int (__cdecl *sound_pip)(float, int) = (int (__cdecl *)(float, int)) 0x004AEDE0;
-    long double (__cdecl *frnd)(float, float) = (long double (__cdecl *)(float, float)) 0x00405CD0;
-    long double (*rndsign)() = (long double (*)()) 0x00405E10;
-    BOOL (__cdecl *main_is_cursor_hover)(float *) = (BOOL (__cdecl *)(float *)) 0x00478D40;
+void remove_ascii(wchar_t* str) {
+    wchar_t* i = str;
+    wchar_t* j = str;
 
-    float *flt_4D0118 = (float *) 0x004D0118;
-    float *flt_4D0114 = (float *) 0x004D0114;
-    float *flt_4D011C = (float *) 0x004D011C;
-    float *flt_4D0110 = (float *) 0x004D0110;
-    float *flt_4D048C = (float *) 0x004D048C;
-    float *flt_4D0498 = (float *) 0x004D0498;
-    float *flt_4D0490 = (float *) 0x004D0490;
-    float *flt_4D0494 = (float *) 0x004D0494;
-
-    int font6x8 = 0x00A39D04;
-
-    float *global_scale = (float *) 0x004D04AC;
-    float *gui_rumble = (float *) 0x0086B834;
-    float *gui_rumble_decay = (float *) 0x0086CA1C;
-    float *gui_rumble_reset = (float *) 0x0086CA18;
-
-
-    char v2; // al
-    int result; // eax
-    int v4; // eax
-    int v5; // esi
-    int v6; // eax
-    int v7; // ebx
-    char *v8; // edx
-    char *v9; // ecx
-    long double v10; // fst6
-    long double v11; // fst5
-    long double v12; // fst7
-    long double v13; // fst5
-    long double v14; // fst6
-    long double v15; // fst7
-    long double v16; // fst6
-    bool v17; // c0
-    bool v18; // c3
-    long double v19; // fst7
-    long double v20; // fst7
-    long double v21; // fst6
-
-    switch (a2)
-    {
-        case 1:
-            v4 = sound_pip(1.0, 1);
-            *(DWORD *) (v4 + 60) = 1048576000;
-            v5 = v4;
-            *(DWORD *) (v4 + 40) = 1;
-            *(float *) (v4 + 148) = 0.89999998;
-            *(float *) (v4 + 76) = 0.75 * *(float *) (v4 + 72);
-            frnd(0.89999998, 1.1);
-            result = a2;
-            *(float *) (v5 + 68) = 0.89999998 * *(float *) (v5 + 68);
-            return result;
-        case 3:
-            v6 = sound_pip(0.75, 1);
-            *(DWORD *) (v6 + 60) = 1048576000;
-            v7 = v6;
-            *(DWORD *) (v6 + 40) = 1;
-            *(float *) (v6 + 148) = 0.89999998;
-            *(float *) (v6 + 76) = 1.25 * *(float *) (v6 + 72);
-            frnd(0.89999998, 1.1);
-            result = 1;
-            *(float *) (v7 + 68) = (0.89999998 + 0.89999998) * *(float *) (v7 + 68);
-            return result;
-        case 5:
-            if (*gui_rumble != 0.0)
-            {
-                *(float *) (a1 + 24) = rndsign() * *gui_rumble * *global_scale + *(float *) (a1 + 24);
-                v20 = rndsign() * *gui_rumble * *global_scale + *(float *) (a1 + 28);
-                v21 = *gui_rumble_decay;
-                *(float *) (a1 + 24) = *(float *) (a1 + 24) * *gui_rumble_decay;
-                *(float *) (a1 + 28) = v20 * v21;
-            }
-            if (!gui_rumble_reset)
-                return 0;
-            result = 0;
-            *(float *) (a1 + 24) = 0.0;
-            *(float *) (a1 + 28) = 0.0;
-            return result;
-        case 6:
-            if (*(BYTE *) (a1 + 188))
-            {
-                if (*(char *) (a1 + 188) <= 0)
-                {
-                    *flt_4D0110 = *(float *) (a1 + 64);
-                    *flt_4D0114 = *(float *) (a1 + 68);
-                    *flt_4D0118 = *(float *) (a1 + 72);
-                    *flt_4D011C = *(float *) (a1 + 76);
-                } else
-                {
-                    *flt_4D0110 = *(float *) (a1 + 80);
-                    *flt_4D0114 = *(float *) (a1 + 84);
-                    *flt_4D0118 = *(float *) (a1 + 88);
-                    *flt_4D011C = *(float *) (a1 + 92);
-                }
-                v2 = *(BYTE *) (a1 + 190);
-            } else
-            {
-                v2 = *(BYTE *) (a1 + 190);
-                if (v2 > 0)
-                {
-                    result = 0;
-                    *flt_4D0110 = 0.0;
-                    *flt_4D0114 = 0.0;
-                    *flt_4D0118 = 0.0;
-                    return result;
-                }
-            }
-            if (v2 || !main_is_cursor_hover((float *) a1))
-                return 0;
-            if (*flt_4D0110 == 0.0)
-            {
-                if (*flt_4D0114 == 0.0)
-                {
-                    v12 = *flt_4D0118;
-                    if (*flt_4D0118 == 0.0)
-                        return 0;
-                    v11 = *flt_4D0110;
-                    v10 = *flt_4D0114;
-                } else
-                {
-                    v12 = *flt_4D0118;
-                    v11 = *flt_4D0110;
-                    v10 = *flt_4D0114;
-                }
-            } else
-            {
-                v10 = *flt_4D0114;
-                v11 = *flt_4D0110;
-                v12 = *flt_4D0118;
-            }
-            v13 = v11 + v11;
-            if (v13 < 0.25)
-            {
-                v13 = 0.25;
-            } else if (v13 >= 1.0)
-            {
-                v13 = 1.0;
-            }
-            *flt_4D0110 = v13;
-            v14 = v10 + v10;
-            if (v14 < 0.25)
-            {
-                v14 = 0.25;
-            } else if (v14 >= 1.0)
-            {
-                v14 = 1.0;
-            }
-            *flt_4D0114 = v14;
-            v15 = v12 + v12;
-            v16 = v15;
-            if (v15 < 0.25)
-            {
-                v19 = 0.25;
-            } else
-            {
-                v17 = v15 > 1.0;
-                v18 = 1.0 == v15;
-                v19 = 1.0;
-                if (!v17 && !v18)
-                    v19 = v16;
-            }
-            *flt_4D0118 = v19;
-            return 0;
-        case 7:
-            //start
-            btn_str_s_p_cpy = btn_str_s_p;
-            btn_str_u = get_btn_str_u(*(char **) (a1 + 200));
-//            if (*(char **) (a1 + 200) && strstr(*(char **) (a1 + 200), "HONK"))
-//            {
-//                printf("a");
-//            }
-            //end
-            v8 = btn_str_u;
-            result = 1;
-            if (v8)
-            {
-                v9 = (char *) *(char *) (a1 + 193);
-                *flt_4D048C = 0.0;
-                *flt_4D0498 = 1.0;
-                *flt_4D0490 = 0.0;
-                *flt_4D0494 = 0.0;
-                plot_text_ex(v8, v9, 1, font6x8);
-                //start
-                if (btn_str_s_p > btn_str_s_xy_p)
-                {
-                    btn_str_s_p = btn_str_s_p_cpy;
-                }
-                //end
-                return 1;
-            }
-            //start
-            if (btn_str_s_p > btn_str_s_xy_p)
-            {
-                btn_str_s_p = btn_str_s_p_cpy;
-            }
-            //end
-            return result;
-        default:
-            return 0;
+    while (*j != L'\0') {
+        *i = *j++;
+        if (*i < 256) {
+            i--;
+        }
+        i++;
     }
+
+    *i = L'\0';
 }
 
-int __cdecl my_main_btn_image_wrap(int a1, int a2)
+void draw_btn_s(wchar_t wchar, double x, double y)
 {
-    int (__cdecl *main_btn_framed)(int a1, int a2) = (int (__cdecl *)(int, int)) 0x0047AAB0;
-    long double
-    (__cdecl *glyph_h)(DWORD *a1, unsigned __int8 a2) = (long double (__cdecl *)(DWORD *,
-                                                                                 unsigned __int8)) 0x004039B0;
-    int (__cdecl *wrap_text_lines)(const char *a1, unsigned int a2) = (int (__cdecl *)(const char *,
-                                                                                       unsigned int)) 0x00476510;
-    char *
-    (__cdecl *wrap_text_ex)(const char **a1, int a2, unsigned int a3, int a4) = (char *(__cdecl *)(const char **,
-                                                                                                   int,
-                                                                                                   unsigned int,
-                                                                                                   int)) 0x00476080;
-    int (__cdecl *turtle_move)(double a1) = (int (__cdecl *)(double)) 0x00409F60;
-    void (__cdecl *turtle_trans)(double a1, double a2) = (void (__cdecl *)(double, double)) 0x00409F10;
-    int (__cdecl *plot_text_ex)(char *a1, char *a2, int a3, int a4) = (int (__cdecl *)(char *, char *, int,
-                                                                                       int)) 0x00474840;
-    int (__cdecl *main_calc_image_wrap_lines)(int a1, DWORD *a2, DWORD *a3) = (int (__cdecl *)(int, DWORD *,
-                                                                                               DWORD *)) 0x004762C0;
+    HDC hDC = wglGetCurrentDC();
+    GLuint list = glGenLists(1);
 
-    float *global_scale = (float *) 0x004D04AC;
-    int font6x8 = 0x00A39D04;
-    float *turtle = (float *) 0x004D00C0;
+    x -= font_w * font_x_offset;
+    y += font_h * font_y_offset;
 
-    //start
-    btn_str_s_p_cpy = btn_str_s_p;
-    btn_str_s_xy_p_cpy = btn_str_s_xy_p;
-    btn_str_u = get_btn_str_u(*(char **) (a1 + 200));
-//    if (strstr(*(char **) (a1 + 200), "HONK"))
-//    {
-//        printf("a");
-//    }
-    //end
+    if (!hFont)
+        font_set();
 
-    int v2; // eax
-    void (__cdecl *v3)(int, int); // ebx
-    long double v4; // fst7
-    int v5; // esi
-    int v6; // ebx
-    int v7; // esi
-    int v8; // edi
-    int v9; // eax
-    int v10; // ebx
-    char *v11; // eax
-    int v12; // eax
-    int v13; // ebx
-    void (__cdecl *v14)(int, DWORD); // eax
-    int v16; // [esp+18h] [ebp-C4h]
-    float v17; // [esp+20h] [ebp-BCh]
-    int v18; // [esp+20h] [ebp-BCh]
-    float v19; // [esp+24h] [ebp-B8h]
-    bool v20; // [esp+2Bh] [ebp-B1h]
-    unsigned int v21; // [esp+2Ch] [ebp-B0h]
-    int v22; // [esp+30h] [ebp-ACh]
-    int v23; // [esp+34h] [ebp-A8h]
-    float v24; // [esp+34h] [ebp-A8h]
-    int v25; // [esp+38h] [ebp-A4h]
-    int v26; // [esp+3Ch] [ebp-A0h]
-    int v27; // [esp+54h] [ebp-88h] BYREF
-    int v28; // [esp+58h] [ebp-84h] BYREF
-    char v29[4]; // [esp+5Ch] [ebp-80h] BYREF
-    char v30[96]; // [esp+60h] [ebp-7Ch] BYREF
+    // 取消纹理映射
+    glDisable(GL_TEXTURE_2D);
+    glRasterPos2f(x, y);
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    // 逐个输出字符
+    wglUseFontBitmapsW(hDC, wchar, 1, list);
+    glCallList(list);
 
-    if (!a2)
-    {
-        v14 = *(void (__cdecl **)(int, DWORD)) (a1 + 232);
-        *(BYTE *) (a1 + 193) = 0;
-        *(float *) (a1 + 296) = 6.0;
-        *(float *) (a1 + 300) = 6.0;
-        *(float *) (a1 + 164) = 1.0;
-        *(float *) (a1 + 168) = 1.0;
-        if (v14)
-            v14(a1, 0);
-        //start
-        if (btn_str_s_p > btn_str_s_xy_p)
-        {
-            btn_str_s_p = btn_str_s_p_cpy;
-            btn_str_s_xy_p = btn_str_s_xy_p_cpy;
-        }
-        //end
-        return main_btn_framed(a1, a2);
-    }
-    if (a2 != 7)
-    {
-        //start
-        if (btn_str_s_p > btn_str_s_xy_p)
-        {
-            btn_str_s_p = btn_str_s_p_cpy;
-            btn_str_s_xy_p = btn_str_s_xy_p_cpy;
-        }
-        //end
-        return main_btn_framed(a1, a2);
-    }
-    v27 = (int) btn_str_u;
-    v19 = glyph_h((DWORD *) font6x8, 88) + 1.0;
-    v22 = (int) (*(float *) (a1 + 44) / *global_scale - *(float *) (a1 + 300));
-    v17 = *(float *) (a1 + 296);
-    *(__int64 *) &v16 = (__int64) (*(float *) (a1 + 32) / *global_scale - (v17 + v17));
-    v21 = v16;
-    //长文本判断 start
-    char *a1_200 = *(char **) (a1 + 200);
-    *(char **) (a1 + 200) = btn_str_u;
-    char *a1_200_new = *(char **) (a1 + 200);
-    v23 = main_calc_image_wrap_lines(a1, &v28, v29);
-    *(char **) (a1 + 200) = a1_200;
-    //长文本判断 end
-    v2 = *(DWORD *) (a1 + 236);
-    v3 = *(void (__cdecl **)(int, int)) (a1 + 232);
-    v4 = v17;
-    memcpy(v30, turtle, sizeof(v30));
-    v20 = v2 != 0;
-    if (v3)
-    {
-        v26 = v2;
-        v5 = (int) *(float *) (a1 + 280);
-        v25 = (int) *(float *) (a1 + 284);
-        turtle_trans((long double) (v5 / 2) + v4, (double) (v20 * (v22 - v25 / 2)));
-        v3(a1, 7);
-        v2 = v26;
-        v4 = v17;
-        v16 = (int) ((long double) (int) (v16 - v5) - v17 * 0.5);
-        v18 = (int) ((long double) v5 + v17);
-    } else
-    {
-        v18 = 0;
-        v25 = 0;
-    }
-    memcpy(turtle, v30, 0x60u);
-    v6 = v23 - 1;
-    if (v2)
-        turtle_move((double) (int) ((long double) v22 - v19 * 0.5));
-    else
-        turtle_move((long double) v6 * v19 * 0.5);
-    if (!*(BYTE *) (a1 + 193))
-    {
-        v24 = v4;
-        turtle_trans(v24, (long double) v6 * v19 * 0.0);
-    }
-    v7 = 0;
-    v8 = 0;
-    turtle_trans((double) v18, 0.0);
-    v9 = (int) btn_str_u;
-    v27 = v9;
-    while (v9)
-    {
-        v10 = (int) v19;
-        v11 = (char *) wrap_text_ex(&v27, font6x8, v16, 0);
-        if (!v11)
-            break;
-        if (!*v11)
-            v10 = (int) ((long double) v10 * 0.5);
-        plot_text_ex(v11, (char *) *(char *) (a1 + 193), 1, (int) font6x8);
-        v12 = v10;
-        v13 = v8 + v10;
-        turtle_trans(0.0, (double) -v12);
-        if (v8 <= v25 && v20 && v13 > v25)
-        {
-            turtle_trans((double) -v18, 0.0);
-            v16 = v21;
-        }
-        if (++v7 >= v28)
-        {
-            if (v28)
-            {
-                //大文本处理逻辑
-                btn_str_s_p = btn_str_s_xy_p;
-                strcpy(btn_str_long_text, *(char **) (a1 + 200));
-                break;
-            }
-        }
-        v9 = v27;
-        v8 = v13;
-    }
-    //start
-//    if (btn_str_s_p > btn_str_s_xy_p)
-//    {
-//        btn_str_s_p = btn_str_s_p_cpy;
-//        btn_str_s_xy_p = btn_str_s_xy_p_cpy;
-//    }
-    //end
-    return 1;
+    // 回收所有临时资源
+    glDeleteLists(list, 1);
+    glEnable(GL_TEXTURE_2D);
 }
 
-bool more_flag = false;
-bool more_rep_flag = false;
-char **a1_200_p;
-char *a1_200;
-int more_btn_count = 0;
-
-int __cdecl my_main_calc_image_wrap_lines(int a1, DWORD *a2, DWORD *a3)
+void my_SDL_GL_SwapWindow(SDL_Window *window)
 {
-    long double
-    (__cdecl *glyph_h)(DWORD *a1, unsigned __int8 a2) = (long double (__cdecl *)(DWORD *,
-                                                                                 unsigned __int8)) 0x004039B0;
-    char *
-    (__cdecl *wrap_text_ex)(const char **a1, int a2, unsigned int a3, int a4) = (char *(__cdecl *)(const char **,
-                                                                                                   int,
-                                                                                                   unsigned int,
-                                                                                                   int)) 0x00476080;
-
-    int font6x8 = 0x00A39D04;
-    float *global_scale = (float *) 0x004D04AC;
-
-//    if(more_rep_flag && a1_200==*(char **)(a1 + 200)){
-//        *a1_200_p = a1_200;
-//        more_flag = false;
-//    }
-    char *a1_200_cpy = *(char **) (a1 + 200);
-    if (more_flag)
+    for (int i = 0; i < btn_str_s_xy_p ; i++)
     {
-        btn_str_s_p_cpy_more = btn_str_s_p;
-        btn_str_u = get_btn_str_u(*(char **) (a1 + 200));
-        btn_str_s_p = btn_str_s_p_cpy_more;
-        *(char **) (a1 + 200) = btn_str_u;
+        draw_btn_s(btn_str_s[i], btn_str_s_xy[i][0], btn_str_s_xy[i][1]);
     }
+    btn_str_s_xy_p = 0;
+    btn_str_s_p = 0;
 
-    long double v3; // fst7
-    long double v4; // fst6
-    int v5; // eax
-    long double v6; // fst5
-    char *v7; // esi
-    int v8; // ebp
-    int v9; // edi
-    int i; // ebx
-    BYTE *v11; // eax
-    int v12; // edx
-    int v14; // [esp+14h] [ebp-58h]
-    int v15; // [esp+18h] [ebp-54h]
-    float v16; // [esp+1Ch] [ebp-50h]
-    int v17; // [esp+20h] [ebp-4Ch]
-    int v18; // [esp+24h] [ebp-48h]
-    int v19; // [esp+2Ch] [ebp-40h]
-    char *v20; // [esp+4Ch] [ebp-20h] BYREF
-
-    v20 = *(char **) (a1 + 200);
-    v16 = glyph_h((DWORD *) font6x8, *v20) + 1.0;
-    v3 = *(float *) (a1 + 296);
-    v4 = *(float *) (a1 + 300);
-    v5 = (int) (*(float *) (a1 + 44) / *global_scale);
-    v6 = *(float *) (a1 + 32) / *global_scale - (v3 + v3);
-    v18 = *(DWORD *) (a1 + 236);
-    if (a2)
-        *a2 = 0;
-    v7 = v20;
-    v8 = 0;
-    v19 = 2 * v5;
-    v17 = 0;
-    v15 = (int) *(float *) (a1 + 284);
-    v9 = (int) ((long double) (int) ((__int64) v6 - (int) *(float *) (a1 + 280)) - v3 * 0.5);
-    for (i = (int) v4; v20; ++v8)
-    {
-        v14 = (int) v16;
-        v11 = (BYTE *) wrap_text_ex(&v20, font6x8, v9, 0);
-        if (!v11)
-            break;
-        if (!*v11)
-            v14 = (int) ((long double) v14 * 0.5);
-        v12 = i + v14;
-        if (v18 != 0 && i <= v15 && v15 < v12)
-            v9 = (__int64) v6;
-        if (!v17 && v18)
-        {
-            if ((long double) v12 >= (long double) v19 - v16 && a2)
-            {
-                *a2 = v8;
-                v17 = 1;
-                if (a3)
-                    *a3 = (DWORD) &v7[-*(DWORD *) (a1 + 200)];
-            } else
-            {
-                v17 = 0;
-            }
-        }
-        v7 = v20;
-        i += v14;
-    }
-    *(char **) (a1 + 200) = a1_200_cpy;
-    return v8;
-}
-
-
-int my_layout_more_constprop_8()
-{
-    more_flag = true;
-    more_btn_count = *btn_count;
-
-    reset_jmp_rep((LPVOID) 0x00433390, layout_more_constprop_8_jmp);
-    int result = layout_more_constprop_8();
-    jmp_rep((LPVOID) 0x00433390, my_layout_more_constprop_8);
-
-//    *a1_200_p = a1_200;
-    more_flag = false;
-//    more_rep_flag = false;
-//    for (int i = 0; i < *btn_count; i++)
-//    {
-//        int btn = (int)&btns[84 * i];
-//        char *str = *(char **) (btn + 200);
-//        if(str)
-//            printf("%s\n", str);
-//        else
-//            printf("%d\n", i);
-//    }
-
-    return result;
-}
-
-char *__cdecl my_plot_text_wrapped_ex(char *a1, char *a2, int a3, int a4, int a5, int a6)
-{
-//    start
-
-    btn_str_s_p_cpy = btn_str_s_p;
-    btn_str_u = get_btn_str_u(a1);
-//    if (strstr(a1, "HONK"))
-//    {
-//        printf("a");
-//    }
-//    end
-
-    long double v6; // fst7
-    char *result; // eax
-    float v8; // [esp+1Ch] [ebp-30h]
-    char *v9; // [esp+2Ch] [ebp-20h] BYREF
-
-    v6 = glyph_h((DWORD *)a6, *a1);
-    v9 = btn_str_u;
-    do
-    {
-        result = (char *)wrap_text_ex(&v9, font6x8, a4, 0);
-        if ( !result )
-            break;
-        plot_text_ex(result, a2, a3, a6);
-        v8 = -(v6 + (long double)a5);
-        turtle_trans(0.0, v8);
-        result = v9;
-    }
-    while ( v9 );
-    //start
-    //浮动字体有些不会打印
-    if(btn_str_s_p>btn_str_s_xy_p)
-    {
-        btn_str_s_p = btn_str_s_xy_p;
-    }
-    //end
-    return result;
+    SDL_GL_SwapWindow(window);
 }
 
 int (*glyph_callback_func_)(DWORD, DWORD, DWORD);
@@ -1206,28 +236,16 @@ int __cdecl my_glyphs_set_callback(int (__cdecl *a1)(DWORD, DWORD, DWORD), int a
 
 int __cdecl my_glyphs_batch_plot_ex(DWORD *a1, unsigned __int8 *a2, int a3, int a4, int a5)
 {
-    void (__cdecl *turtle_trans)(double a1, double a2) =
-    (void (__cdecl *)(double, double)) 0x00409F10;
-    int (__cdecl *sprite_batch_plot)(int, int, int) =
-    (int (__cdecl *)(int, int, int)) 0x00406460;
-    char *(__cdecl *sprite_get)(__int16 a1) =
-    (char *(__cdecl *)(__int16)) 0x00406930;
-
-    double *turtle = (double *) 0x004D00C0;
-    float *flt_4D0118 = (float *) 0x004D0118;
-    float *flt_4D0114 = (float *) 0x004D0114;
-    float *flt_4D011C = (float *) 0x004D011C;
-    float *flt_4D0110 = (float *) 0x004D0110;
-
-    //test start
-//    char *p = strstr((char *) a2, "\xE7\x85\x8E");
+    //start
+    //寻找未翻译的文本
+//    char *p = strstr((char *) a2, "strength");
 //    if (p)
 //    {
 //        void *ret_addr;
 //        __asm__("movl 4(%%ebp), %0" : "=r"(ret_addr));
 //        printf("Return address is %p\n", ret_addr);
 //    }
-    //test end
+    //end
 
     int v5; // ebp
     unsigned int v6; // edx
@@ -1298,35 +316,15 @@ int __cdecl my_glyphs_batch_plot_ex(DWORD *a1, unsigned __int8 *a2, int a3, int 
                 v16 = v21 + 32 * v14;
                 if (v13)
                     turtle_trans((long double) *(__int16 *) (v16 + 12) * 0.5, 0.0);
-                int sdw = *(int *) 0x007CAA38;
-                if ((a2[v13] == 232) && (sdw == 0))
+                //start
+                //记录渲染的utf8字符位置
+                if ((a2[v13] == 232) && (*glypher_shadow == 0))
                 {
-                    btn_str_s_xy[btn_str_s_xy_p][0] = *(double *) 0x004D00C0;
-                    btn_str_s_xy[btn_str_s_xy_p][1] = *(double *) 0x004D00C8;
-                    btn_str_s_xy_p++;
-
-//                    int * glyphs_set = (int *)0x007CAA20;
-//                    for(int i=0;i<6;i++)
-//                        printf("%d,",glyphs_set[i]);
-//                    printf("%d\n",glyphs_set[6]);
-
-//                    for(int i=0;i<11;i++)
-//                        printf("%f,",turtle[i]);
-//                    printf("%f\n",turtle[11]);
-                }
-                /*if(btn_str_u_start==0){
-                    btn_str_u_count--;
-                    double x=*(double *) 0x004D00C0;
-                    double y=*(double *) 0x004D00C8;
-                    drawCNString_point("字", x, y);
-                    btn_str_s_xy[btn_str_s_xy_p][0] = *(double *) 0x004D00C0;
-                    btn_str_s_xy[btn_str_s_xy_p][1] = *(double *) 0x004D00C8;
+                    btn_str_s_xy[btn_str_s_xy_p][0] = *turtle;
+                    btn_str_s_xy[btn_str_s_xy_p][1] = *dbl_4D00C8;
                     btn_str_s_xy_p++;
                 }
-                btn_str_u_start--;
-                if(btn_str_u_start<0 && btn_str_u_count>0){
-                    btn_str_u_start=0;
-                }*/
+                //end
                 sprite_batch_plot(v16, 0, a5);
                 turtle_trans((long double) *(__int16 *) (v16 + 12) * 0.5, 0.0);
             }
@@ -1347,6 +345,705 @@ int __cdecl my_glyphs_batch_plot_ex(DWORD *a1, unsigned __int8 *a2, int a3, int 
     return a3;
 }
 
+//start
+//寻找未翻译的文本
+
+int __cdecl my_plot_text_ex(char *a1, char *a2, int a3, int a4)
+{
+    //start
+    //寻找未翻译的文本
+//    char *p = strstr(a1, "strength");
+//    if (p)
+//    {
+//        void *ret_addr;
+//        __asm__("movl 4(%%ebp), %0" : "=r"(ret_addr));
+//        printf("Return address is %p\n", ret_addr);
+//    }
+    //end
+
+    int v4; // edx
+    float v6; // [esp+Ch] [ebp-90h]
+    char v7[96]; // [esp+20h] [ebp-7Ch] BYREF
+
+    v4 = a4;
+    if ( a3 )
+    {
+//        *glypher_shadow = 1;
+//        memcpy(v7, turtle, sizeof(v7));
+//        v6 = *flt_4D011C * *flt_4D0498;
+//        turtle_set_rgba(*shadow, *flt_4D0490, *flt_4D0494, v6);
+//        turtle_trans(1.0, -1.0);
+//        glyphs_batch_plot(a4, a1, (int)a2, *textglow_);
+//        v4 = a4;
+//        *glypher_shadow = 0;
+//        memcpy(turtle, v7, 0x60u);
+        *glypher_shadow = 0;
+    }
+
+    //start
+//    printf("%s\n",a1);
+    int temp = btn_str_s_p;
+    int temp_xy = btn_str_s_xy_p;
+//    btn_str_u = get_btn_str_u(a1);
+
+    int str_len = strlen(a1);
+
+    strcpy(btn_str_u, a1);
+    int us_w_len = MultiByteToWideChar(CP_UTF8, 0, btn_str_u, -1, NULL, 0);
+    wchar_t* us_w = (wchar_t *) malloc((str_len+10) * sizeof(wchar_t));
+    MultiByteToWideChar(CP_UTF8, 0, btn_str_u, -1, us_w, us_w_len);
+
+    int str_c_index = 0;
+    for(int i=0;i<us_w_len-1;i++){
+
+        if(us_w[i]<256){
+            str_c_index++;
+        }else if(us_w[i]==0xFFFD){
+            if('\xFF'>=btn_str_u[str_c_index] && btn_str_u[str_c_index]=='\xF0' && '\xBF'>=btn_str_u[str_c_index+1] && btn_str_u[str_c_index+1]>='\x80'){
+                wchar_t * s = us_w;
+                int pos = i;
+                int len = us_w_len-1;
+                wmemmove(&s[pos + 1], &s[pos], len - pos + 1);
+
+                us_w[i] = (unsigned char)btn_str_u[str_c_index];  // 如果你想在移动的位置插入特定的字符，可以在这里指定
+
+                us_w_len++;
+                str_c_index++;
+                if(us_w[i]==0xE8){
+                    us_w[i]='?';
+                }
+                i++;
+
+                us_w[i]=(unsigned char)btn_str_u[str_c_index];
+                str_c_index++;
+            }else{
+                us_w[i]=(unsigned char)btn_str_u[str_c_index];
+                str_c_index++;
+            }
+        }else{
+            str_c_index+=3;
+        }
+        if(us_w[i]==0xE8){
+            us_w[i]='?';
+        }
+    }
+    char* rep = utf8_str_rep(us_w);
+
+    int count = strlen(rep);
+
+    strncpy(btn_str_u, rep, count);
+
+    btn_str_u[count] = '\0';
+
+    //-----
+
+    int result = glyphs_batch_plot(v4, btn_str_u, (int)a2, *textglow_);
+
+    //----
+    remove_ascii(us_w);
+
+    us_w_len = wcslen(us_w);
+    wcsncpy(btn_str_s+btn_str_s_p,us_w,us_w_len);
+
+    btn_str_s_p += us_w_len;
+
+
+
+    if(btn_str_s_p!=btn_str_s_xy_p){
+        btn_str_s_p=temp;
+        btn_str_s_xy_p=temp_xy;
+    }
+
+    int rep_len = 0;
+    for (int i = 0; i<result; i++) {
+        if (rep[i] == '\xE8') {
+            rep_len+=3;
+        }else{
+            rep_len++;
+        }
+    }
+
+    free(us_w);
+
+    return rep_len;
+    //end
+}
+
+char *__cdecl my_wrap_text_ex(const char **a1, int a2, unsigned int a3, int a4){
+
+    //start
+    //test
+//    reset_jmp_rep((LPVOID) wrap_text_ex, wrap_text_ex_jmp);
+//    char * result = wrap_text_ex(a1,a2,a3,a4);
+//    jmp_rep((LPVOID) wrap_text_ex, my_wrap_text_ex);
+//    return result;
+    //end
+
+//    btn_str_u = get_btn_str_u_sub(*a1,false);
+
+    int str_len = strlen(*a1);
+
+    strcpy(btn_str_u, *a1);
+    int us_w_len = MultiByteToWideChar(CP_UTF8, 0, btn_str_u, -1, NULL, 0);
+    wchar_t* us_w = (wchar_t *) malloc((str_len+10) * sizeof(wchar_t));
+    MultiByteToWideChar(CP_UTF8, 0, btn_str_u, -1, us_w, us_w_len);
+
+    char *cn = (char *) malloc((str_len*3+10) * sizeof(char));
+    int cn_len = 0;
+
+    int str_c_index = 0;
+    for(int i=0;i<us_w_len-1;i++){
+
+        if(us_w[i]<256){
+            str_c_index++;
+        }else if(us_w[i]==0xFFFD){
+            if('\xFF'>=btn_str_u[str_c_index] && btn_str_u[str_c_index]=='\xF0' && '\xBF'>=btn_str_u[str_c_index+1] && btn_str_u[str_c_index+1]>='\x80'){
+                wchar_t * s = us_w;
+                int pos = i;
+                int len = us_w_len-1;
+                wmemmove(&s[pos + 1], &s[pos], len - pos + 1);
+
+                us_w[i] = (unsigned char)btn_str_u[str_c_index];  // 如果你想在移动的位置插入特定的字符，可以在这里指定
+
+                us_w_len++;
+                str_c_index++;
+                if(us_w[i]==0xE8){
+                    us_w[i]='?';
+                }
+                i++;
+
+                us_w[i]=(unsigned char)btn_str_u[str_c_index];
+                str_c_index++;
+            }else{
+                us_w[i]=(unsigned char)btn_str_u[str_c_index];
+                str_c_index++;
+            }
+        }else{
+            cn[cn_len++] = btn_str_u[str_c_index++];
+            cn[cn_len++] = btn_str_u[str_c_index++];
+            cn[cn_len++] = btn_str_u[str_c_index++];
+//            str_c_index+=3;
+        }
+        if(us_w[i]==0xE8){
+            us_w[i]='?';
+        }
+    }
+    char* rep = utf8_str_rep(us_w);
+
+    reset_jmp_rep((LPVOID) wrap_text_ex, wrap_text_ex_jmp);
+    char * result = wrap_text_ex(&rep,a2,a3,a4);
+    jmp_rep((LPVOID) wrap_text_ex, my_wrap_text_ex);
+
+    int rep_result_len = 0;
+    int len =0;
+    if(result!=NULL){
+        len= strlen(result);
+    }
+    for (int i = 0; i<len; i++) {
+        if (result[i] == '\xE8') {
+            rep_result_len+=3;
+        }else{
+            rep_result_len++;
+        }
+    }
+
+    int rep_len = 0;
+    len = strlen(rep);
+    for (int i = 0; i<len; i++) {
+        if (rep[i] == '\xE8') {
+            rep_len+=3;
+        }else{
+            rep_len++;
+        }
+    }
+
+    if(rep_result_len!=0){
+        strcpy(str_result_temp, result);
+        len = strlen(str_result_temp);
+        int cn_idx = 0;
+        for (int i = 0; i<len; i++) {
+            if (str_result_temp[i] == '\xE8') {
+                //wmemmove(&s[pos + 1], &s[pos], len - pos + 1);
+                memmove(&str_result_temp[i + 2], &str_result_temp[i], len - i + 2);
+                len+=3;
+                str_result_temp[i++] = cn[cn_idx++];
+                str_result_temp[i++] = cn[cn_idx++];
+                str_result_temp[i] = cn[cn_idx++];
+            }
+        }
+    }
+    else{
+        str_result_temp[0]='\0';
+    }
+
+    *a1+=str_len-rep_len;
+
+    free(us_w);
+    free(cn);
+
+    if(result==NULL){
+        return result;
+    }
+
+    return str_result_temp;
+}
+
+int __cdecl my_team_btn_char_stats(int a1, int a2)
+{
+    long double v2; // fst5
+    int selected_charid; // eax
+    long double v4; // fst7
+    int v5; // ebx
+    long double v6; // fst7
+    const char *Str; // esi
+    signed int v8; // edi
+    int i; // ebp
+    int v10; // esi
+    size_t Count; // edi
+    const char *v12; // eax
+    int v14; // eax
+    int v15; // [esp+1Ch] [ebp-200h]
+    int v16; // [esp+1Ch] [ebp-200h]
+    int v17; // [esp+20h] [ebp-1FCh]
+    float v18; // [esp+24h] [ebp-1F8h]
+    unsigned int v19; // [esp+24h] [ebp-1F8h]
+    int safe; // [esp+28h] [ebp-1F4h]
+    float v21; // [esp+2Ch] [ebp-1F0h]
+    int v22; // [esp+30h] [ebp-1ECh]
+    float v23; // [esp+34h] [ebp-1E8h]
+    char v24[96]; // [esp+40h] [ebp-1DCh] BYREF
+    char v25[96]; // [esp+A0h] [ebp-17Ch] BYREF
+    char Destination[284]; // [esp+100h] [ebp-11Ch] BYREF
+
+    if ( a2 != 5 )
+    {
+        if ( a2 == 7 )
+        {
+            v2 = *(float *)(a1 + 32) / *global_scale - 12.0;
+            v15 = (int)(*(float *)(a1 + 44) / *global_scale - 12.0);
+            v18 = glyph_h((DWORD*)font6x8, 88);
+            memcpy(v24, turtle, sizeof(v24));
+            selected_charid = get_selected_charid();
+            safe = (int)chara_get_safe(selected_charid);
+            v4 = (long double)((int)v2 / 3);
+            v21 = v4;
+            v5 = (int)(v4 - 24.0);
+            memcpy(v25, turtle, sizeof(v25));
+            memcpy(turtle, v25, 0x60u);
+            turtle_trans(6.0, (double)v15);
+            memcpy(v25, turtle, sizeof(v25));
+            v6 = -(v18 + 1.0);
+            v23 = v6;
+            turtle_trans(0.0 * v21, v6 * 0.0);
+            v17 = 0;
+            v19 = 9;
+            v22 = v5 + 8;
+            while ( 1 )
+            {
+                Str = my_chara_stat_name(v19);
+                v8 = strlen(Str);
+                if ( v8 <= 0 )
+                {
+                    Count = 1;
+                    v10 = 1;
+                    i = 0;
+                }
+                else
+                {
+                    v16 = 0;
+                    for ( i = 0; i != v8; ++i )
+                    {
+                        v16 = (int)(glyph_w((DWORD*)font6x8, Str[i]) + (long double)v16);
+                        if ( v5 < v16 )
+                            break;
+                    }
+                    v10 = i + 1;
+                    Count = i + 1;
+                }
+                v12 = (char*)my_chara_stat_name(v19);
+                strncpy(Destination, v12, Count);
+                if ( Destination[i] )
+                {
+                    Destination[i] = 46;
+                    Destination[v10] = 0;
+                }
+                if ( chara_stat_known(safe, v19) )
+                {
+                    plot_text(Destination, 0);
+                    turtle_trans((double)v22, 0.0);
+                    v14 = chara_effective_stat(safe, v19);
+                    game_plot_stat_smiley(v14);
+                }
+                else
+                {
+                    *flt_4D0110 = *flt_4D0110 * 0.25;
+                    *flt_4D0114 = 0.25 * *flt_4D0114;
+                    *flt_4D0118 = 0.5 * *flt_4D0118;
+                    plot_text(Destination, 0);
+                    turtle_trans((double)v22, 0.0);
+                    plot_text("?", (char *)1);
+                }
+                ++v17;
+                memcpy(turtle, v25, 0x60u);
+                if ( v17 == 10 )
+                    break;
+                v19 = display_order[v17];
+                turtle_trans((long double)(v17 % 3) * v21, (long double)(v17 / 3) * v23);
+                if ( v17 == 9 )
+                    turtle_trans(v21, 0.0);
+            }
+            memcpy(turtle, v24, 0x60u);
+        }
+        return main_btn_image_wrap(a1, a2);
+    }
+    if ( *dword_A0A534 == *old_selected )
+        return main_btn_image_wrap(a1, a2);
+    main_btn_image_wrap(a1, 5);
+    *old_selected = *dword_A0A534;
+    main_tabscreen_refresh();
+    return 1;
+}
+
+const char *__cdecl my_chara_stat_name(unsigned int a1)
+{
+    if ( a1 > 0xC )
+        return "invalid";
+    else
+        return (const char *)my_chara_stat_name_part_0(a1);
+}
+
+int my_chara_stat_name_part_0(int a1)
+{
+    int v2[13]; // [esp+Ch] [ebp-34h]
+
+    v2[0] = (int) _("morale");
+    v2[2] = (int) _("composure");
+    v2[3] = (int) _("charm");
+    v2[4] = (int) _("wits");
+    v2[1] = (int) _("attitude");
+    v2[5] = (int) _("loyalty");
+    v2[9] = (int) _("strength");
+    v2[11] = (int) _("fitness");
+    v2[10] = (int) _("dexterity");
+    v2[6] = (int) _("medical");
+    v2[7] = (int) _("mechanical");
+    v2[8] = (int) _("shooting");
+    v2[12] = (int) _("vitality");
+    return v2[a1];
+}
+
+int my_customize_layout()
+{
+    int custom; // ebx
+    int v1; // eax
+    int v2; // eax
+    int v3; // eax
+    int v4; // eax
+    int v5; // esi
+    int v6; // eax
+    int v7; // eax
+    int v8; // esi
+    int v9; // ebp
+    int v10; // eax
+    DWORD *v11; // eax
+    DWORD *v12; // eax
+    int v13; // ebp
+    int v14; // eax
+    DWORD *v15; // eax
+    DWORD *v16; // eax
+    int v17; // ebp
+    int v18; // eax
+    DWORD *v19; // eax
+    int v20; // edi
+    int v21; // eax
+    int v22; // ebx
+    int v23; // ebp
+    int v24; // eax
+    DWORD *v25; // eax
+    int v26; // edi
+    int v27; // eax
+    DWORD *v28; // eax
+    int v29; // ebx
+    int v30; // ebx
+    int v31; // eax
+    int v32; // ebx
+    int v33; // eax
+    int result; // eax
+    DWORD *v35; // eax
+    int v36; // ebp
+    int v37; // eax
+    DWORD *v38; // eax
+    int v39; // edi
+    int v40; // ebx
+    DWORD *v41; // eax
+    int v42; // edi
+    int v43; // eax
+    DWORD *v44; // eax
+    char *Str; // [esp+0h] [ebp-5Ch]
+    float v46; // [esp+4h] [ebp-58h]
+    float v47; // [esp+4h] [ebp-58h]
+    float v48; // [esp+4h] [ebp-58h]
+    float v49; // [esp+4h] [ebp-58h]
+    float v50; // [esp+4h] [ebp-58h]
+    char v51[44]; // [esp+30h] [ebp-2Ch] BYREF
+
+    custom = (int)chara_get_custom(*dword_71D248);
+    cursor_restore();
+    button_set_layout(6.0, 8.0);
+    v1 = (int)button_ex(0.0, 1.0, *dword_71D248, 0, (int)customize_btn_char_panel);
+    *(DWORD *)(v1 + 232) = 0x0071D100;
+    v46 = 3.0 * *(float *)(v1 + 36);
+    button_set_h(v1, v46);
+    button_set_layout(6.0, 8.0);
+    button_ex(1.0, 0.5, 0, (int)_("HEAD"), (int)btn_char_edit_mode);
+    button_ex(1.0, 1.5, 1, (int)_("BODY"), (int)btn_char_edit_mode);
+    button_set_layout(6.0, 8.0);
+    v2 = button(2.0, 0.0, 0, (int)_("NAME"));
+    labelify(v2);
+    v3 = button(2.0, 1.0, 0, (int)_("PERK"));
+    labelify(v3);
+    v4 = button(2.0, 2.0, 0, (int)_("TRAIT"));
+    labelify(v4);
+    button_set_layout(6.0, 8.0);
+    v5 = (int)button_ex(4.0, 0.0, 0, custom + 28, (int)main_btn_edit_focus);
+    *(DWORD *)(v5 + 256) = strlen((const char *)(custom + 28));
+    v47 = 3.0 * *(float *)(v5 + 32);
+    button_set_w(v5, v47);
+    v6 = (int)button_ex(4.0, 1.0, 0, 0, (int)btn_select_perk);
+    *(DWORD *)(v6 + 296) = 1082130432;
+    v48 = 3.0 * *(float *)(v6 + 32);
+    button_set_w(v6, v48);
+    v7 = (int)button_ex(4.0, 2.0, 0, 0, (int)btn_select_trait);
+    *(DWORD *)(v7 + 296) = 1082130432;
+    v49 = 3.0 * *(float *)(v7 + 32);
+    button_set_w(v7, v49);
+    if ( *char_edit_mode )
+    {
+        button_set_layout(1.0, 8.0);
+        v8 = (int)button_ex(0.0, 3.0, 0, (int)_("BODY SETTINGS"), (int)main_btn_default);
+        button_set_layout(10.0, 8.0);
+        v35 = (DWORD *)my_selection_constprop_5((int)_("\x12 GENDER %d \x12"), 0, 4, custom + 148, 2, *dword_71D248);
+        v35[68] = custom + 148;
+        v35[57] = (DWORD)btn_roll_datafunc;
+        v35[58] = (DWORD)gender_randfunc;
+        v35[59] = 1;
+        v36 = *dword_71D248;
+        v37 = char_body_count(*(unsigned __int16 *)(custom + 148));
+        v38 = (DWORD *)my_selection_constprop_5((int)_("\x12 TOP %d \x12"), 1, 4, custom + 192, v37, v36);
+        v38[68] = custom + 192;
+        v38[57] = (DWORD)btn_roll_datafunc;
+        v39 = custom + 188;
+        v38[58] = (DWORD)tops_randfunc;
+        v38[59] = 1;
+        Str = (char *)(custom + 188);
+        v40 = custom + 194;
+        v41 = (DWORD *)my_selection_constprop_5((int)_("\x12 SIZE %d \x12"), 0, 5, (int)Str, 4, *dword_71D248);
+        v41[68] = v39;
+        v41[57] = (DWORD)btn_roll_datafunc;
+        v41[58] = (DWORD)bodysize_randfunc;
+        v41[59] = 1;
+        v42 = *dword_71D248;
+        v43 = char_body_count(*(unsigned __int16 *)(v40 - 46));
+        v44 = (DWORD *)my_selection_constprop_5((int)_("\x12 BOTTOMS %d \x12"), 1, 5, v40, v43, v42);
+        v44[57] = (DWORD)btn_roll_datafunc;
+        v44[58] = (DWORD)bottoms_randfunc;
+        v44[68] = v40;
+        v44[59] = 1;
+    }
+    else
+    {
+        button_set_layout(1.0, 8.0);
+        v8 = (int)button_ex(0.0, 3.0, 0, (int)_("HEAD SETTINGS"), (int)main_btn_default);
+        button_set_layout(10.0, 8.0);
+        v9 = *dword_71D248;
+        v10 = char_head_count(*(unsigned __int16 *)(custom + 148));
+        v11 = (DWORD *)my_selection_constprop_5((int)_("\x12 FACE %d \x12"), 0, 4, custom + 190, v10, v9);
+        v11[68] = custom + 190;
+        v11[57] = (DWORD)btn_roll_datafunc;
+        v11[58] = (DWORD)face_randfunc;
+        v11[59] = 1;
+        v12 = (DWORD *)my_selection_constprop_5((int)_("\x12 SKIN CLR %d \x12"), 1, 4, custom + 216, *skin_pal, *dword_71D248);
+        v12[68] = custom + 216;
+        v12[57] = (DWORD)btn_roll_datafunc;
+        v12[58] = (DWORD)skinclr_randfunc;
+        v12[59] = 1;
+        v13 = *dword_71D248;
+        v14 = char_hair_count(*(unsigned __int16 *)(custom + 148));
+        v15 = (DWORD *)my_selection_constprop_5((int)_("\x12 HAIR %d \x12"), 0, 5, custom + 198, v14 + 1, v13);
+        v15[68] = custom + 198;
+        v15[57] = (DWORD)btn_roll_datafunc;
+        v15[58] = (DWORD)hair_randfunc;
+        v16 = (DWORD *)my_selection_constprop_5((int)_("\x12 HAIR CLR %d \x12"), 1, 5, custom + 218, *hair_pal, *dword_71D248);
+        v16[68] = custom + 218;
+        v16[57] = (DWORD)btn_roll_datafunc;
+        v16[58] = (DWORD)hairclr_randfunc;
+        v16[59] = 1;
+        v17 = *dword_71D248;
+        v18 = char_hat_count(*(unsigned __int16 *)(custom + 148));
+        v19 = (DWORD *)my_selection_constprop_5((int)_("\x12 HAT %d \x12"), 0, 6, custom + 200, v18 + 1, v17);
+        v19[68] = custom + 200;
+        v19[57] = (DWORD)btn_roll_datafunc;
+        v20 = custom + 202;
+        v19[58] = (DWORD)hat_randfunc;
+        v21 = *(unsigned __int16 *)(custom + 148);
+        v22 = custom + 196;
+        v23 = *dword_71D248;
+        v24 = char_glasses_count(v21);
+        v25 = (DWORD *)my_selection_constprop_5((int)_("\x12 SHADES %d \x12"), 1, 6, v20, v24 + 1, v23);
+        v25[68] = v20;
+        v25[57] = (DWORD)btn_roll_datafunc;
+        v25[58] = (DWORD)shades_randfunc;
+        v26 = *dword_71D248;
+        v27 = char_beard_count(*(unsigned __int16 *)(v22 - 48));
+        v28 = (DWORD *)my_selection_constprop_5((int)_("\x12 EXTRA %d \x12"), 0, 7, v22, v27 + 1, v26);
+        v28[57] = (DWORD)btn_roll_datafunc;
+        v28[58] = (DWORD)beard_randfunc;
+        v28[68] = v22;
+    }
+    v50 = 1.5 * *(float *)(v8 + 32);
+    button_set_w(v8, v50);
+    *(BYTE *)(v8 + 190) = -1;
+    *(DWORD *)(v8 + 76) = 1065353216;
+    *(float *)(v8 + 64) = 0.25;
+    *(DWORD *)(v8 + 8) = *TITLE_BAR_SPRITE;
+    *(float *)(v8 + 68) = 0.25;
+    *(float *)(v8 + 72) = 0.25;
+    game_lower_box(v51);
+    button_set_layout(3.0, 1.0);
+    v29 = (int)button_ex(0.0, 0.0, 0, (int)_("Random"), (int)btn_roll_char);
+    iconify(v29);
+    *(DWORD *)(v29 + 276) = *icons16_id + 10;
+    v30 = (int)button_ex(1.0, 0.0, 0, (int)_("Save"), (int)main_btn_image_push_state);
+    iconify(v30);
+    v31 = *icons16_id;
+    *(DWORD *)(v30 + 224) = charsave_state;
+    *(DWORD *)(v30 + 276) = v31 + 7;
+    v32 = (int)button_ex(2.0, 0.0, 0, (int)_("Load"), (int)main_btn_image_push_state);
+    iconify(v32);
+    v33 = *icons16_id;
+    *(DWORD *)(v32 + 224) = charload_state;
+    result = v33 + 6;
+    *(DWORD *)(v32 + 276) = result;
+    return result;
+}
+    
+int my_selection_constprop_5(int a1, int a2, int a3, int a4, int a5, int a6){
+    /*printf("%d,",a1);
+    reset_jmp_rep((LPVOID) selection_constprop_5, selection_constprop_5_jmp);
+    int result = selection_constprop_5(a1,a2,a3,a4,a5,a6);
+    jmp_rep((LPVOID) selection_constprop_5, my_selection_constprop_5);
+    return result;*/
+    int v6; // ebx
+    DWORD *v8; // edi
+    int v9; // esi
+    DWORD *v10; // ebx
+    float v12; // [esp+0h] [ebp-3Ch]
+    float v13; // [esp+0h] [ebp-3Ch]
+    float v14; // [esp+0h] [ebp-3Ch]
+    float v15; // [esp+4h] [ebp-38h]
+    float v16; // [esp+4h] [ebp-38h]
+    float v17; // [esp+1Ch] [ebp-20h]
+
+    int off_4D3115 = 0x004D3115;
+    int (__cdecl *btn_rotate_uint16_val)(int a1, int a2) = (int (__cdecl *)(int a1, int a2))0x0042B7B0;
+    float *(__cdecl *game_colour_swap)(float *a1) = (float *(__cdecl *)(float *a1))0x0044DFD0;
+    int (*validate_body_reenter)() = (int (*)())0x0042B620;
+    int (__cdecl *btn_rotate_uint16_val_dec)(DWORD *a1, int a2) = (int (__cdecl *)(DWORD *a1, int a2))0x0042B720;
+    int (__cdecl *btn_rotate_uint16_val_inc)(DWORD *a1, int a2) = (int (__cdecl *)(DWORD *a1, int a2))0x0042B6A0;
+
+    v6 = 5 * a2;
+    v15 = (float)a3;
+    v17 = v15;
+    v12 = (float)(5 * a2);
+    v8 = (DWORD *)button(v12, v15, 0, off_4D3115);
+    v8[58] = a4;
+    v8[57] = (DWORD)btn_rotate_uint16_val;
+    v8[63] = a5;
+    button_init((int)v8);
+    game_colour_swap(v8);
+    v8[62] = (DWORD)validate_body_reenter;
+    v8[57] = (DWORD)btn_rotate_uint16_val_dec;
+    v8[1] = a6;
+    v13 = (float)(v6 + 2);
+    v9 = button(v13, v17, 0, a1);
+    v16 = 3.0 * *(float *)(v9 + 32);
+    button_set_w(v9, v16);
+    v14 = (float)(v6 + 4);
+    v10 = (DWORD *)button(v14, v17, 0, 5058839);
+    v10[58] = a4;
+    v10[57] = (DWORD)btn_rotate_uint16_val;
+    v10[63] = a5;
+    button_init((int)v10);
+    game_colour_swap(v10);
+    v10[62] = (DWORD)validate_body_reenter;
+    v10[57] = (DWORD)btn_rotate_uint16_val_inc;
+    v10[1] = a6;
+    return v9;
+}
+
+
+//end
+
+//start
+//逆向分析
+int __cdecl my_sprite_batch_plot(int a1, int a2, int a3)
+{
+    int (*quad_batch)() = (int (*)())0x00406120;
+    double *dbl_4D00D8 = (double *)0x004D00D8;
+
+    int v3; // esi
+    int v4; // edx
+    int v5; // eax
+    int v6; // eax
+    int v7; // eax
+    long double v8; // fst6
+    int v9; // eax
+    int result; // eax
+    char v11[96]; // [esp+20h] [ebp-7Ch] BYREF
+
+    memcpy(v11, turtle, sizeof(v11));
+    v3 = *(DWORD *)(a1 + 28) + 28 * a3;
+    if ( *(DWORD *)(v3 + 32) )
+    {
+        v4 = *(DWORD *)(v3 + 36);
+        v5 = *(DWORD *)(v3 + 44);
+        if ( v4 >= v5 )
+        {
+            *(DWORD *)(v3 + 36) = v5;
+        }
+        else
+        {
+            v6 = *(DWORD *)(v3 + 40);
+            if ( v4 >= v6 )
+            {
+                do
+                {
+                    v7 = v6 + 1024;
+                    *(DWORD *)(v3 + 40) = v7;
+                    *(DWORD *)(v3 + 32) = (DWORD)realloc(*(void **)(v3 + 32), v7 << 7);
+                    v6 = *(DWORD *)(v3 + 40);
+                }
+                while ( v6 <= *(DWORD *)(v3 + 36) );
+            }
+        }
+    }
+    else
+    {
+        *(DWORD *)(v3 + 40) = 1024;
+        *(DWORD *)(v3 + 44) = 0x10000;
+        *(DWORD *)(v3 + 32) = (DWORD)calloc(1u, 0x20000u);
+    }
+    v8 = 1.0;
+    if ( a2 )
+        v8 = -1.0;
+    v9 = -*(__int16 *)(a1 + 22);
+    *dbl_4D00D8 = *dbl_4D00D8 * v8;
+    turtle_trans((double)*(__int16 *)(a1 + 20), (double)v9);
+    result = quad_batch();
+    memcpy(turtle, v11, 0x60u);
+    return result;
+}
+//end
 
 // DLL被加载、卸载时调用
 BOOL APIENTRY DllMain(HMODULE hModule,
@@ -1357,13 +1054,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     switch (ul_reason_for_call)
     {
         case DLL_PROCESS_ATTACH:
-//            AllocConsole();
-//            freopen("CONOUT$", "w", stdout);
-
-            btn_str_u = (char *) malloc(196605 * sizeof(char));
-            btn_str_u_cpy = (DWORD) btn_str_u;
-            btn_str_long_text = (char *) malloc(196605 * sizeof(char));
-
+            //start
             // 加载原DLL，获取真正的SDL2_mixer地址
             SDL2_mixer_module = LoadLibrary("real_SDL2_mixer.dll");
 
@@ -1386,59 +1077,52 @@ BOOL APIENTRY DllMain(HMODULE hModule,
                 printf("SDL2_mixer error: real_SDL2_mixer.dll not find");
                 return FALSE;
             }
+            //end
 
-            //jmp_rep((LPVOID)0x004C7F38, my_glDrawElements);
+            //start
+            //gettext
+            //注释这段解决游戏内%s格式化错误
+//            setlocale(LC_ALL, "");
+            bindtextdomain ("SDL2_mixer", "locale");
+            textdomain ("SDL2_mixer");
+            bind_textdomain_codeset("SDL2_mixer", "UTF-8");
+            //end
 
-            jmp_rep((LPVOID) 0x004C7DF8, my_SDL_GL_SwapWindow);
+            //start
+            //命令行显示和初始化
+//            AllocConsole();
+//            freopen("CONOUT$", "w", stdout);
+            btn_str_u = (char *) malloc(12285 * sizeof(char));
+            str_result_temp = (char *) malloc(12285 * sizeof(char));
+            str_rep_temp = (char *) malloc(12285 * sizeof(char));
+            //end
 
-            //jmp_rep((LPVOID)0x004039F0, my_glyphs_w);
+            //start
+            //utf8文本记录和文本显示
+            jmp_rep((LPVOID) real_SDL_GL_SwapWindow, my_SDL_GL_SwapWindow);
+            jmp_rep((LPVOID) glyphs_batch_plot_ex, my_glyphs_batch_plot_ex);
+            jmp_rep((LPVOID) glyphs_set_callback, my_glyphs_set_callback);
+            //end
 
-//            jmp_rep((LPVOID) 0x0041CB30, my_button_init);
+            //start
+            //utf8文本和原文的替换逻辑
+            jmp_rep((LPVOID) plot_text_ex, my_plot_text_ex);
 
-            //jmp_rep((LPVOID)0x00403630, my_glyphs_batch_plot_ex);
+            memcpy(wrap_text_ex_jmp, (void *) wrap_text_ex, 5);
+            jmp_rep((LPVOID) wrap_text_ex, my_wrap_text_ex);
+            //end
 
-            //jmp_rep((LPVOID)0x0041BC00, my_buttons_draw_ex);
-
-
-            jmp_rep((LPVOID) 0x0047B0C0, my_main_btn_wrap);
-
-
-            jmp_rep((LPVOID) 0x00478E10, my_main_btn_default);
-
-
-//            jmp_rep((LPVOID) 0x0047B610, my_main_btn_range);
-//            jmp_rep((LPVOID) 0x0047BA60, my_main_btn_slider);
-
-            jmp_rep((LPVOID) 0x0047AB10, my_main_btn_image_wrap);
-
-            //大文本辅助 start
-            jmp_rep((LPVOID) 0x004762C0, my_main_calc_image_wrap_lines);
-
-
-            memcpy(layout_more_constprop_8_jmp, (void *) 0x00433390, 5);
-            jmp_rep((LPVOID) 0x00433390, my_layout_more_constprop_8);
-
-//            jmp_rep((LPVOID) 0x00474940,my_plot_text);
-//            jmp_rep((LPVOID) 0x00474970,my_plot_text_noshadow);
-//            jmp_rep((LPVOID) 0x0041BC00,my_buttons_draw_ex);
-//            jmp_rep((LPVOID) 0x004765A0,my_plot_textf);
-//            jmp_rep((LPVOID) 0x0047C310, my_main_sprite_batches_draw_ex);
-//            jmp_rep((LPVOID) 0x0044A520, my_float_text_draw);
-            //大文本辅助 end
-
-            //浮动文本 武器 start
-            jmp_rep((LPVOID) 0x00476600, my_plot_text_wrapped_ex);
-            //浮动文本 武器 end
-
-            jmp_rep((LPVOID) 0x00403630, my_glyphs_batch_plot_ex);
-
-            jmp_rep((LPVOID) 0x00403610, my_glyphs_set_callback);
+            //start
+            //代码内部文本翻译
+            jmp_rep((LPVOID) customize_layout, my_customize_layout);
+            jmp_rep((LPVOID) team_btn_char_stats, my_team_btn_char_stats);
+            //end
 
             break;
         case DLL_PROCESS_DETACH:
             // 手动卸载原DLL
+            font_free();
             FreeLibrary(SDL2_mixer_module);
-//            font_free();
             break;
         case DLL_THREAD_ATTACH:
         case DLL_THREAD_DETACH:
@@ -1446,4 +1130,3 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     }
     return TRUE;
 }
-
