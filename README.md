@@ -7,7 +7,9 @@
 **因为游戏中对纹理的处理使用的函数不是标准opengl函数加上我对opengl不熟, 我目前卡在了第一步, 如果你有什么头绪欢迎通过电子邮箱联系我**
 
 ## INSTALL
-参考Releases
+参考Releases  
+效果:
+![U4OTYSE)8FGR`D9 SLRM70L](https://github.com/sevenshape/death-road-to-canada-utf8/assets/47808940/24042aa8-2aa7-4e03-8d97-b41933dc979c)
 
 ## BUILD
 基于msys2和cmake构建  
