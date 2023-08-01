@@ -6,6 +6,9 @@
 2. 跨平台支持  
 **因为游戏中对纹理的处理使用的函数不是标准opengl函数加上我对opengl不熟, 我目前卡在了第一步, 如果你有什么头绪欢迎通过电子邮箱联系我**
 
+## INSTALL
+参考Releases
+
 ## BUILD
 基于msys2和cmake构建  
 msys2官网: https://www.msys2.org  
