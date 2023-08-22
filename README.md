@@ -2,14 +2,14 @@
 让drtc支持显示utf8字符的插件  
 
 ## TODO
-1. 目前文本的显示逻辑和原生不一样导致了utf8字符和原字符显示不一致, 所以需要修改sprite_batch_plot函数并支持sdl2_ttf
-2. 跨平台支持  
-**因为游戏中对纹理的处理使用的函数不是标准opengl函数加上我对opengl不熟, 我目前卡在了第一步, 如果你有什么头绪欢迎通过电子邮箱联系我**
+- [x] 1. 目前文本的显示逻辑和原生不一样导致了utf8字符和原字符显示不一致, 所以需要修改sprite_batch_plot函数并支持sdl2_ttf
+- [ ] 2. 跨平台支持
 
 ## INSTALL
 参考Releases  
-效果:
-![U4OTYSE)8FGR`D9 SLRM70L](https://github.com/sevenshape/death-road-to-canada-utf8/assets/47808940/24042aa8-2aa7-4e03-8d97-b41933dc979c)
+效果:  
+<img width="725" alt="1692691868633" src="https://github.com/sevenshape/death-road-to-canada-utf8/assets/47808940/7ef080e9-8fd4-4609-9937-c9f09b5e6d02">
+
 
 ## BUILD
 基于msys2和cmake构建  
