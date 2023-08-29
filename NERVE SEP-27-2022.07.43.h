@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 //idapro全局属性
 void (__cdecl *turtle_trans)(double a1, double a2) =
 (void (__cdecl *)(double, double)) 0x00409F10;
@@ -223,6 +225,43 @@ int *dword_A0B848 = (int*)0x00A0B848;
 int* display_order = (int*)0x004E0A40;
 int* dword_A0A534 = (int*)0x00A0A534;
 int* old_selected = (int*)0x008C892C;
+
+int (*quad_batch)(int a1, int a2) = (int (*)(int a1, int a2))0x00406120;
+double *dbl_4D00D8 = (double *)0x004D00D8;
+double *dbl_4D00E0 = (double *)0x004D00E0;
+double *dbl_4D0108 = (double *)0x004D0108;
+double *dbl_4D0100 = (double *)0x004D0100;
+double *dbl_4D00F8 = (double *)0x004D00F8;
+double *dbl_4D00F0 = (double *)0x004D00F0;
+double *dbl_4D00D0 = (double *)0x004D00D0;
+
+//SDL_CreateWindow(const char *title, int x, int y, int w,int h, Uint32 flags);
+BOOL (*is_screen_size_changed)() = (BOOL (*)())0x004722E0;
+void (__cdecl *draw_clear)(float red, float green, float blue) = (void (__cdecl *)(float, float, float))0x00402930;
+char *(__cdecl *atlas_get)(char a1) = (char *(__cdecl *)(char))0x00401480;
+int (__cdecl *sprite_batches_reset)(int a1) = (int (__cdecl *)(int))0x00406670;
+void (__cdecl *turtle_set_pos)(double a1, double a2) = (void (__cdecl *)(double, double))0x00409C70;
+int (__cdecl *main_sprite_batch_plot_centered)(int a1, int a2, int a3) = (int (__cdecl *)(int, int, int))0x0047C220;
+void (__cdecl *sprite_batch_draw)(int a1) = (void (__cdecl *)(int))0x00406690;
+int (*game_fade_draw)() = (int (*)())0x0044C790;
+int (*main_draw_filmgrain_fx)() = (int (*)())0x0047BE90;
+void (__cdecl *main_sprite_batches_draw_ex)(int a1) = (void (__cdecl *)(int))0x0047C310;
+
+int* gogo_ = (int*)0x0086CB1C;
+int* scaled_h = (int*)0x0086B93C;
+int* sprites_0 = (int*)0x0086BA3C;
+int* skeletons_base_id = (int*)0x0086B8A8;
+int* dword_A0B22C = (int*)0x00A0B22C;
+int (*mad_fps)() = (int (*)())0x00404E40;
+
+void (__cdecl *draw_bind_texture)(int *a1) = (void (__cdecl *)(int *)) 0x004028B0;
+
+int* element_init = (int*)0x00566F80;
+int element_list_0 = 0x00566FA0;
+int unk_626FA0 = 0x00626FA0;
+
+int* last_texture = (int*)0x004D0004;
+
 //idapro全局属性
 
 char *__cdecl my_wrap_text_ex(const char **a1, int a2, unsigned int a3, int a4);
@@ -232,4 +271,29 @@ BYTE wrap_text_ex_jmp[5];
 int my_selection_constprop_5(int a1, int a2, int a3, int a4, int a5, int a6);
 int my_chara_stat_name_part_0(int a1);
 const char *__cdecl my_chara_stat_name(unsigned int a1);
+
+//start
+//暂存
 int __cdecl my_sprite_batch_plot(int a1, int a2, int a3);
+int __cdecl my_quad_batch(int a1, int a2);
+//end
+
+int __cdecl my_sprite_batch_plot_ucs4(int a1, int a2, int a3, int s);
+int __cdecl my_quad_batch_ucs4(int a1, int a2, int s);
+
+
+void __cdecl my_sprite_batch_draw(int a1);
+
+void font_set(int atlas);
+
+GLsizei atlas_width = 0;
+GLsizei atlas_height = 0;
+GLsizei ft_width;
+GLsizei ft_height;
+
+char msg[1024];
+
+int __cdecl my_plot_text_ex(char *a1, char *a2, int a3, int a4);
+GLuint load_texture(const char *filename);
+
+bool utf8_plot = FALSE;
