@@ -6,6 +6,10 @@
 #include <libintl.h>
 #include <iconv.h>
 #include <png.h>
+#include <windows.h>
+
+#define LODWORD(l) ((DWORD)(((DWORDLONG)(l)) & 0xffffffff))
+#define SHIDWORD(ll) ((DWORD)(((ll) >> 32) & 0xFFFFFFFF))
 
 #define _(STRING) gettext(STRING)
 
@@ -42,18 +46,9 @@ __declspec(dllexport) int Mix_SetMusicPosition(double position){return real_Mix_
 __declspec(dllexport) int Mix_VolumeMusic(int volume){return real_Mix_VolumeMusic(volume);}
 //end
 
-char *btn_str_u;
-wchar_t btn_str_s[4095];
-int btn_str_s_p = 0;
-int btn_str_s_xy_p = 0;
-
-char *str_rep_temp;
-
-char *str_result_temp;
 
 //start
 //font
-
 GLuint textureID;
 
 typedef struct {
@@ -165,6 +160,64 @@ GLuint load_texture(const char *filename) {
 
 //start
 //jmp util
+void asm_opcode_rep(LPVOID address,BYTE* opcode,int opcode_size)
+{
+    BYTE asmInstruction[16];
+    DWORD oldProtect;
+    // 定义jmpInstruction变量
+    for (int i = 0; i < opcode_size; ++i) {
+        asmInstruction[i] = opcode[i];
+    }
+
+//    for(int i = 0; i < opcode_size+4; i++) {
+//        printf("%02X ", asmInstruction[i]);  // 两位十六进制大写
+//    }
+
+    // 修改内存保护，使其可写
+    VirtualProtect(address, opcode_size, PAGE_EXECUTE_READWRITE, &oldProtect);
+
+    // 写入jmp指令
+    memcpy((LPVOID) address, asmInstruction, opcode_size);
+
+    // 恢复内存保护
+    VirtualProtect((LPVOID) address, opcode_size, oldProtect, NULL);
+}
+
+void asm_rep(LPVOID address,BYTE* opcode,int opcode_size,LPVOID opcode_offset)
+{
+    BYTE asmInstruction[16];
+    DWORD oldProtect;
+    // 定义jmpInstruction变量
+    for (int i = 0; i < opcode_size; ++i) {
+        asmInstruction[i] = opcode[i];
+    }
+
+    asmInstruction[opcode_size] = (DWORD)opcode_offset & 0xFF;
+    asmInstruction[opcode_size+1] = ((DWORD)opcode_offset >> 8) & 0xFF;
+    asmInstruction[opcode_size+2] = ((DWORD)opcode_offset >> 16) & 0xFF;
+    asmInstruction[opcode_size+3] = ((DWORD)opcode_offset >> 24) & 0xFF;
+
+//    for(int i = 0; i < opcode_size+4; i++) {
+//        printf("%02X ", asmInstruction[i]);  // 两位十六进制大写
+//    }
+
+    // 修改内存保护，使其可写
+    VirtualProtect(address, opcode_size+4, PAGE_EXECUTE_READWRITE, &oldProtect);
+
+    // 写入jmp指令
+    memcpy((LPVOID) address, asmInstruction, opcode_size+4);
+
+    // 恢复内存保护
+    VirtualProtect((LPVOID) address, opcode_size+4, oldProtect, NULL);
+}
+
+void asm_rep_ex(LPVOID address,int opcode_size,LPVOID opcode_offset)
+{
+    BYTE opcode_temp[16];
+    memcpy(opcode_temp, address, opcode_size);
+    asm_rep(address, opcode_temp, opcode_size, opcode_offset);
+}
+
 void jmp_rep(LPVOID address, LPVOID new_address)
 {
     DWORD jmpOffset;
@@ -207,23 +260,6 @@ void reset_jmp_rep(LPVOID address, BYTE *layout_more_constprop_8)
 
 //start
 //utf8 util
-char* utf8_str_rep(const wchar_t * s) {
-    int s_len = wcslen(s);
-    str_rep_temp[s_len] = '\0';
-    int len = 0;
-    while (*s) {
-        if (*s < 256) {
-            str_rep_temp[len] = (char)*s;
-        }else{
-            str_rep_temp[len] = '\xE8';
-        }
-
-        len++;
-        s++;
-    }
-
-    return str_rep_temp;
-}
 
 char* utf8_str_char_rep(const char * s, size_t s_len) {
     int len = 0;
@@ -370,6 +406,15 @@ int __cdecl my_glyphs_batch_plot_ex(DWORD *a1, unsigned __int8 *a2, int a3, int 
     }
     v13 = 0;
     turtle_trans(v9, 0.0);
+
+    /*char* seach = "更多信息";
+    if (strcmp(a2,seach)==0)
+    {
+        void *ret_addr;
+        __asm__("movl 4(%%ebp), %0" : "=r"(ret_addr));
+        printf("Return address is %p\n", ret_addr);
+    }*/
+
     if (a3 > 0)
     {
         do
@@ -414,7 +459,104 @@ int __cdecl my_glyphs_batch_plot_ex(DWORD *a1, unsigned __int8 *a2, int a3, int 
 }
 
 //start
-//寻找未翻译的文本
+
+int __cdecl my_text_w(char *a1)
+{
+    char *v1; // ebx
+    char i; // al
+    long double v3; // fst7
+    int v5; // [esp+14h] [ebp-18h]
+
+    //start
+    int str_len = strlen(a1);
+
+    char *ucs2_result;
+    size_t ucs2_len;
+    int err = convert_encoding("UTF-8", "UCS-2", a1, str_len, &ucs2_result, &ucs2_len);
+    if(err!=0){
+        sprintf(msg,"convert_encoding error");
+        MessageBox(NULL, msg, "", MB_OK);
+    }
+
+    int len=0;
+    int str_s_len = 0;
+    for(int i=0;i<ucs2_len;){
+        wchar_t ucs2 = ((unsigned char)ucs2_result[i] << 8) | (unsigned char)ucs2_result[i+1];
+        if (ucs2 < 256) {
+            str_rep_temp[len] = (char)ucs2;
+        }else{
+            str_rep_temp[len] = '\xE8';
+            btn_str_s[btn_str_s_p+str_s_len] = ucs2;
+            str_s_len++;
+        }
+
+        len++;
+        i+=2;
+    }
+    str_rep_temp[len] = '\0';
+    btn_str_s_p+=str_s_len;
+
+    char* a1_cpy = a1;
+    a1 = str_rep_temp;
+    //end
+
+    v1 = a1;
+    v5 = 0;
+    for ( i = *a1; *v1; v5 = (int)(v3 + (long double)v5) )
+    {
+        ++v1;
+        v3 = glyph_w((DWORD *) font6x8, i);
+        i = *v1;
+    }
+
+    //start
+    a1 = a1_cpy;
+    free(ucs2_result);
+    //end
+    return v5;
+}
+
+int __cdecl my_plot_text_noshadow(char *a1, int a2)
+{
+    int str_len = strlen(a1);
+
+    char *ucs2_result;
+    size_t ucs2_len;
+    int err = convert_encoding("UTF-8", "UCS-2", a1, str_len, &ucs2_result, &ucs2_len);
+    if(err!=0){
+        sprintf(msg,"convert_encoding error");
+        MessageBox(NULL, msg, "", MB_OK);
+    }
+
+    int len=0;
+    int str_s_len = 0;
+    for(int i=0;i<ucs2_len;){
+        wchar_t ucs2 = ((unsigned char)ucs2_result[i] << 8) | (unsigned char)ucs2_result[i+1];
+        if (ucs2 < 256) {
+            str_rep_temp[len] = (char)ucs2;
+        }else{
+            str_rep_temp[len] = '\xE8';
+            btn_str_s[btn_str_s_p+str_s_len] = ucs2;
+            str_s_len++;
+        }
+
+        len++;
+        i+=2;
+    }
+    str_rep_temp[len] = '\0';
+    btn_str_s_p+=str_s_len;
+
+    //start
+    //显示逻辑
+    utf8_plot = TRUE;
+    int result = glyphs_batch_plot((int)font6x8, str_rep_temp, a2, *textglow_);
+    utf8_plot = FALSE;
+    //end
+
+    free(ucs2_result);
+
+    return result;
+}
 
 int __cdecl my_plot_text_ex(char *a1, char *a2, int a3, int a4)
 {
@@ -475,7 +617,7 @@ int __cdecl my_plot_text_ex(char *a1, char *a2, int a3, int a4)
     int result = glyphs_batch_plot(v4, str_rep_temp, (int)a2, *textglow_);
     utf8_plot = FALSE;
     //end
-    
+
 
     int rep_len = 0;
     for (int i = 0; i<result; i++) {
@@ -746,448 +888,224 @@ int my_chara_stat_name_part_0(int a1)
     return v2[a1];
 }
 
-int my_customize_layout()
+//代码文本按钮
+int *__cdecl my_button_ex(float a1, float a2, int a3,int a4, int a5)
 {
-    int custom; // ebx
-    int v1; // eax
-    int v2; // eax
-    int v3; // eax
-    int v4; // eax
-    int v5; // esi
-    int v6; // eax
-    int v7; // eax
-    int v8; // esi
-    int v9; // ebp
-    int v10; // eax
-    DWORD *v11; // eax
-    DWORD *v12; // eax
-    int v13; // ebp
-    int v14; // eax
-    DWORD *v15; // eax
-    DWORD *v16; // eax
-    int v17; // ebp
-    int v18; // eax
-    DWORD *v19; // eax
-    int v20; // edi
-    int v21; // eax
-    int v22; // ebx
-    int v23; // ebp
-    int v24; // eax
-    DWORD *v25; // eax
-    int v26; // edi
-    int v27; // eax
-    DWORD *v28; // eax
-    int v29; // ebx
-    int v30; // ebx
-    int v31; // eax
-    int v32; // ebx
-    int v33; // eax
-    int result; // eax
-    DWORD *v35; // eax
-    int v36; // ebp
-    int v37; // eax
-    DWORD *v38; // eax
-    int v39; // edi
-    int v40; // ebx
-    DWORD *v41; // eax
-    int v42; // edi
-    int v43; // eax
-    DWORD *v44; // eax
-    char *Str; // [esp+0h] [ebp-5Ch]
-    float v46; // [esp+4h] [ebp-58h]
-    float v47; // [esp+4h] [ebp-58h]
-    float v48; // [esp+4h] [ebp-58h]
-    float v49; // [esp+4h] [ebp-58h]
-    float v50; // [esp+4h] [ebp-58h]
-    char v51[44]; // [esp+30h] [ebp-2Ch] BYREF
+    int offset;
+    if(*perks_selected ){
+        if((void*)a4>=(void*)&my_perks[2498]){
+            offset=9992;
+            a4+=offset;
+//            printf("TRAIT: %d->%d, PERK: %d->%d\n",dword_872C44[2498],dword_872C40[2498],dword_872C44[0],dword_872C40[0]);
+//            printf("a4: p%p, my_perks[2498]: p%p\n",a4,&my_perks[2498]);
+//            printf("base: p%p, TRAIT: %s p%p,  button_ex: %s p%p\n",my_perks,&my_perks[2498*2],&my_perks[2498*2],(char*)a4,a4);
+        }
+    }
 
-    custom = (int)chara_get_custom(*dword_71D248);
-    cursor_restore();
-    button_set_layout(6.0, 8.0);
-    v1 = (int)button_ex(0.0, 1.0, *dword_71D248, 0, (int)customize_btn_char_panel);
-    *(DWORD *)(v1 + 232) = 0x0071D100;
-    v46 = 3.0 * *(float *)(v1 + 36);
-    button_set_h(v1, v46);
-    button_set_layout(6.0, 8.0);
-    button_ex(1.0, 0.5, 0, (int)_("HEAD"), (int)btn_char_edit_mode);
-    button_ex(1.0, 1.5, 1, (int)_("BODY"), (int)btn_char_edit_mode);
-    button_set_layout(6.0, 8.0);
-    v2 = button(2.0, 0.0, 0, (int)_("NAME"));
-    labelify(v2);
-    v3 = button(2.0, 1.0, 0, (int)_("PERK"));
-    labelify(v3);
-    v4 = button(2.0, 2.0, 0, (int)_("TRAIT"));
-    labelify(v4);
-    button_set_layout(6.0, 8.0);
-    v5 = (int)button_ex(4.0, 0.0, 0, custom + 28, (int)main_btn_edit_focus);
-    *(DWORD *)(v5 + 256) = strlen((const char *)(custom + 28));
-    v47 = 3.0 * *(float *)(v5 + 32);
-    button_set_w(v5, v47);
-    v6 = (int)button_ex(4.0, 1.0, 0, 0, (int)btn_select_perk);
-    *(DWORD *)(v6 + 296) = 1082130432;
-    v48 = 3.0 * *(float *)(v6 + 32);
-    button_set_w(v6, v48);
-    v7 = (int)button_ex(4.0, 2.0, 0, 0, (int)btn_select_trait);
-    *(DWORD *)(v7 + 296) = 1082130432;
-    v49 = 3.0 * *(float *)(v7 + 32);
-    button_set_w(v7, v49);
-    if ( *char_edit_mode )
-    {
-        button_set_layout(1.0, 8.0);
-        v8 = (int)button_ex(0.0, 3.0, 0, (int)_("BODY SETTINGS"), (int)main_btn_default);
-        button_set_layout(10.0, 8.0);
-        v35 = (DWORD *)my_selection_constprop_5((int)_("\x12 GENDER %d \x12"), 0, 4, custom + 148, 2, *dword_71D248);
-        v35[68] = custom + 148;
-        v35[57] = (DWORD)btn_roll_datafunc;
-        v35[58] = (DWORD)gender_randfunc;
-        v35[59] = 1;
-        v36 = *dword_71D248;
-        v37 = char_body_count(*(unsigned __int16 *)(custom + 148));
-        v38 = (DWORD *)my_selection_constprop_5((int)_("\x12 TOP %d \x12"), 1, 4, custom + 192, v37, v36);
-        v38[68] = custom + 192;
-        v38[57] = (DWORD)btn_roll_datafunc;
-        v39 = custom + 188;
-        v38[58] = (DWORD)tops_randfunc;
-        v38[59] = 1;
-        Str = (char *)(custom + 188);
-        v40 = custom + 194;
-        v41 = (DWORD *)my_selection_constprop_5((int)_("\x12 SIZE %d \x12"), 0, 5, (int)Str, 4, *dword_71D248);
-        v41[68] = v39;
-        v41[57] = (DWORD)btn_roll_datafunc;
-        v41[58] = (DWORD)bodysize_randfunc;
-        v41[59] = 1;
-        v42 = *dword_71D248;
-        v43 = char_body_count(*(unsigned __int16 *)(v40 - 46));
-        v44 = (DWORD *)my_selection_constprop_5((int)_("\x12 BOTTOMS %d \x12"), 1, 5, v40, v43, v42);
-        v44[57] = (DWORD)btn_roll_datafunc;
-        v44[58] = (DWORD)bottoms_randfunc;
-        v44[68] = v40;
-        v44[59] = 1;
+    //寻找字符串
+//    char* s = "Warrior";
+//    if(a4!=0 && strcmp(s, (char*)a4) == 0){
+//        printf("111");
+//    }
+
+    if(a4!=0){
+        a4 = (int) gettext_ex((char*)a4);
     }
-    else
-    {
-        button_set_layout(1.0, 8.0);
-        v8 = (int)button_ex(0.0, 3.0, 0, (int)_("HEAD SETTINGS"), (int)main_btn_default);
-        button_set_layout(10.0, 8.0);
-        v9 = *dword_71D248;
-        v10 = char_head_count(*(unsigned __int16 *)(custom + 148));
-        v11 = (DWORD *)my_selection_constprop_5((int)_("\x12 FACE %d \x12"), 0, 4, custom + 190, v10, v9);
-        v11[68] = custom + 190;
-        v11[57] = (DWORD)btn_roll_datafunc;
-        v11[58] = (DWORD)face_randfunc;
-        v11[59] = 1;
-        v12 = (DWORD *)my_selection_constprop_5((int)_("\x12 SKIN CLR %d \x12"), 1, 4, custom + 216, *skin_pal, *dword_71D248);
-        v12[68] = custom + 216;
-        v12[57] = (DWORD)btn_roll_datafunc;
-        v12[58] = (DWORD)skinclr_randfunc;
-        v12[59] = 1;
-        v13 = *dword_71D248;
-        v14 = char_hair_count(*(unsigned __int16 *)(custom + 148));
-        v15 = (DWORD *)my_selection_constprop_5((int)_("\x12 HAIR %d \x12"), 0, 5, custom + 198, v14 + 1, v13);
-        v15[68] = custom + 198;
-        v15[57] = (DWORD)btn_roll_datafunc;
-        v15[58] = (DWORD)hair_randfunc;
-        v16 = (DWORD *)my_selection_constprop_5((int)_("\x12 HAIR CLR %d \x12"), 1, 5, custom + 218, *hair_pal, *dword_71D248);
-        v16[68] = custom + 218;
-        v16[57] = (DWORD)btn_roll_datafunc;
-        v16[58] = (DWORD)hairclr_randfunc;
-        v16[59] = 1;
-        v17 = *dword_71D248;
-        v18 = char_hat_count(*(unsigned __int16 *)(custom + 148));
-        v19 = (DWORD *)my_selection_constprop_5((int)_("\x12 HAT %d \x12"), 0, 6, custom + 200, v18 + 1, v17);
-        v19[68] = custom + 200;
-        v19[57] = (DWORD)btn_roll_datafunc;
-        v20 = custom + 202;
-        v19[58] = (DWORD)hat_randfunc;
-        v21 = *(unsigned __int16 *)(custom + 148);
-        v22 = custom + 196;
-        v23 = *dword_71D248;
-        v24 = char_glasses_count(v21);
-        v25 = (DWORD *)my_selection_constprop_5((int)_("\x12 SHADES %d \x12"), 1, 6, v20, v24 + 1, v23);
-        v25[68] = v20;
-        v25[57] = (DWORD)btn_roll_datafunc;
-        v25[58] = (DWORD)shades_randfunc;
-        v26 = *dword_71D248;
-        v27 = char_beard_count(*(unsigned __int16 *)(v22 - 48));
-        v28 = (DWORD *)my_selection_constprop_5((int)_("\x12 EXTRA %d \x12"), 0, 7, v22, v27 + 1, v26);
-        v28[57] = (DWORD)btn_roll_datafunc;
-        v28[58] = (DWORD)beard_randfunc;
-        v28[68] = v22;
-    }
-    v50 = 1.5 * *(float *)(v8 + 32);
-    button_set_w(v8, v50);
-    *(BYTE *)(v8 + 190) = -1;
-    *(DWORD *)(v8 + 76) = 1065353216;
-    *(float *)(v8 + 64) = 0.25;
-    *(DWORD *)(v8 + 8) = *TITLE_BAR_SPRITE;
-    *(float *)(v8 + 68) = 0.25;
-    *(float *)(v8 + 72) = 0.25;
-    game_lower_box(v51);
-    button_set_layout(3.0, 1.0);
-    v29 = (int)button_ex(0.0, 0.0, 0, (int)_("Random"), (int)btn_roll_char);
-    iconify(v29);
-    *(DWORD *)(v29 + 276) = *icons16_id + 10;
-    v30 = (int)button_ex(1.0, 0.0, 0, (int)_("Save"), (int)main_btn_image_push_state);
-    iconify(v30);
-    v31 = *icons16_id;
-    *(DWORD *)(v30 + 224) = charsave_state;
-    *(DWORD *)(v30 + 276) = v31 + 7;
-    v32 = (int)button_ex(2.0, 0.0, 0, (int)_("Load"), (int)main_btn_image_push_state);
-    iconify(v32);
-    v33 = *icons16_id;
-    *(DWORD *)(v32 + 224) = charload_state;
-    result = v33 + 6;
-    *(DWORD *)(v32 + 276) = result;
+
+
+    //gettext不能处理\xF5，要写额外的文本逻辑
+    /*char* start = "\xF5\xFB\xE7\xF0\xFC  START  \xF5\xFB\xE7\xFC";
+    if(a4!=0 && strcmp(start, (char*)a4) == 0){
+        sprintf(mo_start, "\xF5\xFB\xE7\xF0\xFC  %s  \xF5\xFB\xE7\xFC", _("START"));
+        a4=(int)mo_start;
+        reset_jmp_rep((LPVOID) button_ex, button_ex_jmp);
+        int * result = button_ex(a1,a2,a3,a4,a5);
+        jmp_rep((LPVOID) button_ex, my_button_ex);
+
+        return result;
+    }*/
+
+    reset_jmp_rep((LPVOID) button_ex, button_ex_jmp);
+    int * result = button_ex(a1,a2,a3,a4,a5);
+    jmp_rep((LPVOID) button_ex, my_button_ex);
+
     return result;
 }
 
-int my_selection_constprop_5(int a1, int a2, int a3, int a4, int a5, int a6){
-    int v6; // ebx
-    DWORD *v8; // edi
-    int v9; // esi
-    DWORD *v10; // ebx
-    float v12; // [esp+0h] [ebp-3Ch]
-    float v13; // [esp+0h] [ebp-3Ch]
-    float v14; // [esp+0h] [ebp-3Ch]
-    float v15; // [esp+4h] [ebp-38h]
-    float v16; // [esp+4h] [ebp-38h]
-    float v17; // [esp+1Ch] [ebp-20h]
+int __cdecl my_main_btn_wrap(int a1, int a2){
 
-    int off_4D3115 = 0x004D3115;
-    int (__cdecl *btn_rotate_uint16_val)(int a1, int a2) = (int (__cdecl *)(int a1, int a2))0x0042B7B0;
-    float *(__cdecl *game_colour_swap)(float *a1) = (float *(__cdecl *)(float *a1))0x0044DFD0;
-    int (*validate_body_reenter)() = (int (*)())0x0042B620;
-    int (__cdecl *btn_rotate_uint16_val_dec)(DWORD *a1, int a2) = (int (__cdecl *)(DWORD *a1, int a2))0x0042B720;
-    int (__cdecl *btn_rotate_uint16_val_inc)(DWORD *a1, int a2) = (int (__cdecl *)(DWORD *a1, int a2))0x0042B6A0;
+    char* s = (char*)*(DWORD *)(a1 + 200);
 
-    v6 = 5 * a2;
-    v15 = (float)a3;
-    v17 = v15;
-    v12 = (float)(5 * a2);
-    v8 = (DWORD *)button(v12, v15, 0, off_4D3115);
-    v8[58] = a4;
-    v8[57] = (DWORD)btn_rotate_uint16_val;
-    v8[63] = a5;
-    button_init((int)v8);
-    game_colour_swap(v8);
-    v8[62] = (DWORD)validate_body_reenter;
-    v8[57] = (DWORD)btn_rotate_uint16_val_dec;
-    v8[1] = a6;
-    v13 = (float)(v6 + 2);
-    v9 = button(v13, v17, 0, a1);
-    v16 = 3.0 * *(float *)(v9 + 32);
-    button_set_w(v9, v16);
-    v14 = (float)(v6 + 4);
-    v10 = (DWORD *)button(v14, v17, 0, 5058839);
-    v10[58] = a4;
-    v10[57] = (DWORD)btn_rotate_uint16_val;
-    v10[63] = a5;
-    button_init((int)v10);
-    game_colour_swap(v10);
-    v10[62] = (DWORD)validate_body_reenter;
-    v10[57] = (DWORD)btn_rotate_uint16_val_inc;
-    v10[1] = a6;
-    return v9;
+    if(s!=0){
+        *(DWORD *)(a1 + 200) = (DWORD) gettext_ex(s);
+    }
+
+    reset_jmp_rep((LPVOID) main_btn_wrap, main_btn_wrap_jmp);
+    int result = main_btn_wrap(a1,a2);
+    jmp_rep((LPVOID) main_btn_wrap, my_main_btn_wrap);
+
+    return result;
 }
 
+int __cdecl my_btn_music_slider(int a1, int a2)
+{
+    reset_jmp_rep((LPVOID) btn_music_slider, btn_music_slider_jmp);
+    int  result = btn_music_slider(a1,a2);
+    jmp_rep((LPVOID) btn_music_slider, my_btn_music_slider);
 
+    *(DWORD *)(a1 + 200) = (DWORD)_((char*)*(DWORD *)(a1 + 200));
+
+    return result;
+}
+
+int __cdecl my_btn_sound_slider(int a1, int a2)
+{
+    reset_jmp_rep((LPVOID) btn_sound_slider, btn_sound_slider_jmp);
+    int  result = btn_sound_slider(a1,a2);
+    jmp_rep((LPVOID) btn_sound_slider, my_btn_sound_slider);
+
+    *(DWORD *)(a1 + 200) = (DWORD)_((char*)*(DWORD *)(a1 + 200));
+
+    return result;
+}
+
+int my_vsnprintf(char *str, size_t size, char *format, va_list ap) {
+
+    char* gt = gettext_ex(format);
+    if(gt != format){
+        format = gt;
+    }else{
+        return vsnprintf(str, size, format, ap);
+    }
+
+    int count = 0;
+
+    while (*format) {
+        if (*format == '%') {
+            format++;
+            if (*format == 's') {
+                char* s = va_arg(ap, char*);
+                char* gts = gettext_ex(s);
+                count += snprintf(str + count, size - count, "%s", gts);
+            }else {
+                char *fmt_end = strpbrk(format, "diouxXc");
+                if (fmt_end)
+                {
+                    // 将找到的格式字符串，包括%和格式化符号，复制到一个临时缓冲区中
+                    size_t fmt_size = fmt_end - (format-1) + 1;
+                    char tmp_fmt[fmt_size + 1];
+                    strncpy(tmp_fmt, (format-1), fmt_size);
+                    tmp_fmt[fmt_size] = '\0';
+
+                    int i = va_arg(ap, int);
+                    count += snprintf(str + count, size - count, tmp_fmt, i);
+
+                    // 移动格式字符串的指针
+                    format=fmt_end;
+                }else{
+                    fmt_end = strpbrk(format, "diufFeEgGxXoscpaAn%");
+                    format=fmt_end;
+                }
+            }
+        } else {
+            if (count < size - 1) {
+                str[count] = *format;
+                count++;
+            }
+        }
+        format++;
+    }
+    if (size > 0) {
+        str[count] = '\0';
+    }
+    return count;
+}
+
+char* get_hex_str(char *str) {
+    char *p = str;
+    char *q = str;
+
+    while (*p) {
+        if (*p == '\\' && *(p + 1) == 'x') {
+            int ch;
+            sscanf(p + 2, "%2x", &ch);
+            *q++ = ch;
+            p += 4;
+        } else {
+            *q++ = *p++;
+        }
+    }
+    *q = '\0';
+    return str;
+}
+
+char* get_escape_str(char *str) {
+    int length = strlen(str);
+    char *q = escape_str_gl;
+
+    for (int i = 0; i < length; ++i) {
+        unsigned char ch = (unsigned char)str[i];
+        if (ch <= 0x1F || ch >= 0x7F) { // 非可见ASCII字符
+            sprintf(q, "\\x%02X", ch);
+            q += 4;
+        } else {
+            *q++ = ch;
+        }
+    }
+    *q = '\0';
+
+    return escape_str_gl;
+}
+
+char* gettext_ex(char* str){
+    char* escape_str = get_escape_str(str);
+    char* gettext_str = _(escape_str);
+    //*gettext_str!='\0'解决gettext_str解析错误返回\0的bug
+    if(escape_str != gettext_str && *gettext_str!='\0'){
+        char *hex_str = get_hex_str(gettext_str);
+        return hex_str;
+    }else{
+        append_if_not_present("gettext_add.txt", escape_str);
+        return str;
+    }
+}
+
+void append_if_not_present(const char *filename, const char *str) {
+    FILE *file = fopen(filename, "r+");
+    if (!file) {
+        perror("Could not open file");
+        return;
+    }
+
+    // Determine the size of the file
+    fseek(file, 0, SEEK_END);
+    long filesize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Read the entire file into memory (for simplicity)
+    char *buffer = (char *)malloc(filesize + 1);
+    if (!buffer) {
+        perror("Memory allocation failed");
+        fclose(file);
+        return;
+    }
+
+    fread(buffer, 1, filesize, file);
+    buffer[filesize] = '\0';  // Null-terminate the string
+
+    // Check if the string is present in the file
+    if (!strstr(buffer, str)) {
+        // If not present, append it
+        fseek(file, 0, SEEK_END);  // Move to the end of the file
+        fprintf(file, "%s\n", str);  // Append the string (with a newline for clarity)
+    }
+
+    free(buffer);
+    fclose(file);
+}
 //end
 
 //start
-int __cdecl my_sprite_batch_plot(int a1, int a2, int a3)
-{
-    int v3; // esi
-    int v4; // edx
-    int v5; // eax
-    int v6; // eax
-    int v7; // eax
-    long double v8; // fst6
-    int v9; // eax
-    int result; // eax
-    char v11[96]; // [esp+20h] [ebp-7Ch] BYREF
-
-    memcpy(v11, turtle, sizeof(v11));
-    v3 = *(DWORD *)(a1 + 28) + 28 * a3;
-    if ( *(DWORD *)(v3 + 32) )
-    {
-        v4 = *(DWORD *)(v3 + 36);
-        v5 = *(DWORD *)(v3 + 44);
-        if ( v4 >= v5 )
-        {
-            *(DWORD *)(v3 + 36) = v5;
-        }
-        else
-        {
-            v6 = *(DWORD *)(v3 + 40);
-            if ( v4 >= v6 )
-            {
-                do
-                {
-                    v7 = v6 + 1024;
-                    *(DWORD *)(v3 + 40) = v7;
-                    *(DWORD *)(v3 + 32) = (DWORD)realloc(*(void **)(v3 + 32), v7 << 7);
-                    v6 = *(DWORD *)(v3 + 40);
-                }
-                while ( v6 <= *(DWORD *)(v3 + 36) );
-            }
-        }
-    }
-    else
-    {
-        *(DWORD *)(v3 + 40) = 1024;
-        *(DWORD *)(v3 + 44) = 0x10000;
-        *(DWORD *)(v3 + 32) = (DWORD)calloc(1u, 0x20000u);
-    }
-    v8 = 1.0;
-    if ( a2 )
-        v8 = -1.0;
-    v9 = -*(__int16 *)(a1 + 22);
-    *dbl_4D00D8 = *dbl_4D00D8 * v8;
-    turtle_trans((double)*(__int16 *)(a1 + 20), (double)v9);
-    result = my_quad_batch(a1,a3);
-    memcpy(turtle, v11, 0x60u);
-    return result;
-}
-
-int __cdecl my_quad_batch(int a1, int a2)
-{
-int v2; // ebp
-DWORD *v3; // edx
-__int16 v4; // si
-__int16 v5; // di
-__int16 v6; // bx
-long double v7; // fst7
-__int16 v8; // cx
-__int16 v9; // ax
-long double v10; // fst6
-long double v11; // fst5
-long double v12; // fst4
-long double v13; // fst3
-int v14; // ebp
-long double v15; // fst2
-int result; // eax
-long double v17; // fst1
-long double v18; // fst4
-long double v19; // rt0
-long double v20; // rt1
-__int16 v21; // bp
-long double v22; // fst1
-long double v23; // fst3
-long double v24; // fst1
-long double v25; // fst5
-long double v26; // rt1
-long double v27; // fst1
-long double v28; // fst6
-__int16 v29; // di
-__int16 v30; // [esp+2h] [ebp-4Ah]
-float v31; // [esp+4h] [ebp-48h]
-float v32; // [esp+8h] [ebp-44h]
-float v33; // [esp+Ch] [ebp-40h]
-float v34; // [esp+10h] [ebp-3Ch]
-float v35; // [esp+14h] [ebp-38h]
-float v36; // [esp+18h] [ebp-34h]
-float v37; // [esp+1Ch] [ebp-30h]
-float v38; // [esp+20h] [ebp-2Ch]
-float v39; // [esp+24h] [ebp-28h]
-float v40; // [esp+28h] [ebp-24h]
-__int16 v41; // [esp+2Ch] [ebp-20h]
-float v42; // [esp+34h] [ebp-18h]
-float v43; // [esp+34h] [ebp-18h]
-float v44; // [esp+34h] [ebp-18h]
-float v45; // [esp+34h] [ebp-18h]
-float v46; // [esp+34h] [ebp-18h]
-
-v2 = *(DWORD *)(a1 + 28);//v2固定为5287968
-v3 = (DWORD *)(v2 + 28 * a2);//a2默认为0
-v34 = (float)*(int *)(v2 + 8);
-v4 = (__int16)(*flt_4D0110 * 255.0);
-v5 = *(WORD *)a1;
-v7 = (long double)*(__int16 *)(a1 + 2);
-v8 = *(WORD *)(a1 + 4);
-v9 = *(WORD *)(a1 + 6);
-v6 = (__int16)(*flt_4D0114 * 255.0);
-v30 = (__int16)(*flt_4D0118 * 255.0);
-v41 = (__int16)(255.0 * *flt_4D011C);
-
-v37 = (long double)v9 + v7;//纹理高度
-v42 = (long double)v8 * 0.5 * *dbl_4D00D8;
-v10 = v42;
-v31 = 0.5 * (long double)v9 * *dbl_4D00E0;
-v43 = *dbl_4D0108;
-v11 = v43;
-v38 = -v43;
-v44 = *dbl_4D0100;
-v12 = v44;
-v35 = *dbl_4D00F8;
-v45 = *dbl_4D00F0;
-v13 = v45;
-v39 = -v45;
-v32 = *turtle;
-v33 = *dbl_4D00C8;
-v46 = *dbl_4D00D0;
-v14 = v3[9];
-if ( v14 >= v3[10] )
-return 0;
-v15 = v11 * v31;
-result = v3[8] + (v14 << 7);//v3[8]是开辟的动态内存, 每个字符站128 byte
-v3[9] = v14 + 1;
-v17 = -v10 * v35;
-v40 = v12;
-v18 = -v31 * v12;
-v19 = v17;
-v20 = v13 * v10;
-v21 = (__int16)(v34 - v7);
-v22 = v38 * v31;
-v23 = v22;
-v24 = v31 * v40;
-v25 = v20 + v24;
-v26 = v24;
-v27 = v35 * v10;
-v28 = v10 * v39;
-
-v36 = (long double)v5 + (long double)v8;
-v29 = (__int16)v36;
-
-*(float *)result = v15 + v17 + v32;
-*(float *)(result + 4) = v18 + v13 * v10 + v33;
-*(float *)(result + 8) = v46;
-*(WORD *)(result + 12) = v5;//左下
-*(WORD *)(result + 14) = v21;
-*(BYTE *)(result + 16) = v4;
-*(BYTE *)(result + 17) = v6;
-*(BYTE *)(result + 18) = v30;
-*(BYTE *)(result + 19) = v41;
-*(float *)(result + 32) = v19 + v22 + v32;
-*(float *)(result + 36) = v25 + v33;
-*(float *)(result + 40) = v46;
-*(WORD *)(result + 44) = v5;//左上
-*(WORD *)(result + 46) = (__int16)(v34 - v37);
-*(BYTE *)(result + 48) = v4;
-*(BYTE *)(result + 49) = v6;
-*(BYTE *)(result + 50) = v30;
-*(BYTE *)(result + 51) = v41;
-*(float *)(result + 64) = v15 + v27 + v32;
-*(float *)(result + 68) = v18 + v28 + v33;
-*(float *)(result + 72) = v46;
-*(WORD *)(result + 76) = v29;//右下
-*(WORD *)(result + 78) = v21;
-*(BYTE *)(result + 80) = v4;
-*(BYTE *)(result + 81) = v6;
-*(BYTE *)(result + 82) = v30;
-*(BYTE *)(result + 83) = v41;
-*(float *)(result + 96) = v32 + v27 + v23;
-*(float *)(result + 100) = v28 + v26 + v33;
-*(float *)(result + 104) = v46;
-*(WORD *)(result + 108) = v29;//右上
-*(WORD *)(result + 110) = (__int16)(v34 - v37);
-*(BYTE *)(result + 112) = v4;
-*(BYTE *)(result + 113) = v6;
-*(BYTE *)(result + 114) = v30;
-*(BYTE *)(result + 115) = v41;
-
-v3[14] = result;
-return result;
-}
 
 int __cdecl my_sprite_batch_plot_ucs4(int a1, int a2, int a3, int s)
 {
@@ -1481,6 +1399,118 @@ void __cdecl my_sprite_batch_draw(int a1)
 }
 //end
 
+const char *(__cdecl *fs_pop_string)(char *a1) =
+(const char *(__cdecl *)(char *)) 0x00425670;
+
+int *dword_875348 = (int *) 0x00875348;
+char *Str2_temp = (char *) 0x00872C48;
+int *curperk = (int *) 0x00870528;
+
+int(__cdecl *defer_err_bleep)() =
+(int(__cdecl *)()) 0x004751A0;
+
+
+const char *(__cdecl *script_abort)(const char *Format, ...) =
+(const char *(__cdecl *)(const char *Format, ...)) 0x0048FA70;
+
+const char *(__cdecl *word_strtrait)(char *a1) =
+(const char *(__cdecl *)(char *)) 0x00488D60;
+
+char *__cdecl my_word_strtrait(char *a1)
+{
+    const char *v1; // eax
+    int v2; // edi
+    const char *Str1; // ebp
+    const char *Str2; // ebx
+    int v5; // esi
+    char *result; // eax
+    char *v7; // eax
+    char *v8; // edi
+
+    v1 = fs_pop_string(a1);
+    v2 = *dword_875348;
+    Str1 = v1;
+    if ( *dword_875348 <= 0 )
+    {
+        LABEL_8:
+        v8 = &Str2_temp[312 * v2];
+        *curperk = (int)v8;
+        result = strncpy(v8, Str1, 0x28u);
+        v8[39] = 0;
+        ++*dword_875348;
+    }
+    else
+    {
+        Str2 = Str2_temp;
+        v5 = 0;
+        do
+        {
+            result = (char *)strcmp(Str1, Str2);
+            if ( !result )
+            {
+                *curperk = (int)Str2;
+                return result;
+            }
+            ++v5;
+            Str2 += 312;
+        }
+        while ( v2 != v5 );
+        if ( v2 <= 64 )
+            goto LABEL_8;
+        *curperk = 0;
+        defer_err_bleep();
+        return script_abort("OUT OF TRAIT SPACE\n");
+    }
+    return result;
+}
+
+
+const char *(__cdecl *word_strperk)(char *a1) =
+(const char *(__cdecl *)(char *)) 0x00488E20;
+
+
+
+
+
+
+
+int * perk_pick_callback = (int*)0x870520;
+
+void *my_word_perks_init()
+{
+    void *result; // eax
+
+    memset(my_perks, 0, 9992+312*64);
+    result = memset(perks, 0, 0x4E10u);
+    *curperk = 0;
+    *perks_selected = 0;
+    *perk_pick_callback = 0;
+    return result;
+}
+
+
+int(__cdecl *layout_4)(int a1) =
+(int(__cdecl *)(int)) 0x00488940;
+
+int __cdecl my_btn_perk_page(int a1, int a2)
+{
+    char *v3; // eax
+    int v4; // edx
+
+    if ( a2 != 3 )
+        return main_btn_framed(a1, a2);
+
+    v3 = &perks[9992 * (*perks_selected & 1)];
+    v4 = ~((*((DWORD *)v3 + 2497) + 8 * *(DWORD *)(a1 + 4)) >> 31) & (*((DWORD *)v3 + 2497) + 8 * *(DWORD *)(a1 + 4));
+
+    if ( v4 > 24 )
+        v4 = 24;
+    *((DWORD *)v3 + 2497) = v4;
+    main_btn_framed(a1, 3);
+    layout_4(*(DWORD *)(a1 + 4));
+    return 1;
+}
+
 // DLL被加载、卸载时调用
 BOOL APIENTRY DllMain(HMODULE hModule,
                       DWORD ul_reason_for_call,
@@ -1490,6 +1520,15 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     switch (ul_reason_for_call)
     {
         case DLL_PROCESS_ATTACH:
+
+            //start
+            //命令行显示和初始化
+//            AllocConsole();
+//            freopen("CONOUT$", "w", stdout);
+//            SetConsoleOutputCP(CP_UTF8);
+//            FreeConsole();
+            //end
+
             //start
             // 加载原DLL，获取真正的SDL2_mixer地址
             SDL2_mixer_module = LoadLibrary("real_SDL2_mixer.dll");
@@ -1517,45 +1556,156 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 
             //start
             //gettext
-            //注释这段解决游戏内%s格式化错误
-//            setlocale(LC_ALL, "");
             bindtextdomain ("SDL2_mixer", "locale");
             textdomain ("SDL2_mixer");
             bind_textdomain_codeset("SDL2_mixer", "UTF-8");
             //end
 
             //start
-            //命令行显示和初始化
-//            AllocConsole();
-//            freopen("CONOUT$", "w", stdout);
-            btn_str_u = (char *) malloc(12285 * sizeof(char));
-            str_result_temp = (char *) malloc(12285 * sizeof(char));
-            str_rep_temp = (char *) calloc(12285 , sizeof(char));
-            //end
-
-            //start
             //utf8文本记录和文本显示
             jmp_rep((LPVOID) glyphs_batch_plot_ex, my_glyphs_batch_plot_ex);
             jmp_rep((LPVOID) glyphs_set_callback, my_glyphs_set_callback);
+
+            //文本渲染
+            jmp_rep((LPVOID) sprite_batch_draw, my_sprite_batch_draw);
             //end
 
             //start
             //utf8文本和原文的替换逻辑
-            jmp_rep((LPVOID) plot_text_ex, my_plot_text_ex);
 
+            //常规文本处理逻辑
+            jmp_rep((LPVOID) plot_text_ex, my_plot_text_ex);
             memcpy(wrap_text_ex_jmp, (void *) wrap_text_ex, 5);
             jmp_rep((LPVOID) wrap_text_ex, my_wrap_text_ex);
+
+            //横幅文本处理逻辑
+            jmp_rep((LPVOID) plot_text_noshadow, my_plot_text_noshadow);
+            jmp_rep((LPVOID) text_w, my_text_w);
             //end
 
             //start
             //代码内部文本翻译
-            jmp_rep((LPVOID) customize_layout, my_customize_layout);
             jmp_rep((LPVOID) team_btn_char_stats, my_team_btn_char_stats);
-            //end
 
-            //start
-            //获取drtc其它变量
-            jmp_rep((LPVOID) sprite_batch_draw, my_sprite_batch_draw);
+            memcpy(button_ex_jmp, (void *) button_ex, 5);
+            jmp_rep((LPVOID) button_ex, my_button_ex);
+            memcpy(main_btn_wrap_jmp, (void *) main_btn_wrap, 5);
+            jmp_rep((LPVOID) main_btn_wrap, my_main_btn_wrap);
+            memcpy(btn_music_slider_jmp, (void *) btn_music_slider, 5);
+            jmp_rep((LPVOID) btn_music_slider, my_btn_music_slider);
+            memcpy(btn_sound_slider_jmp, (void *) btn_sound_slider, 5);
+            jmp_rep((LPVOID) btn_sound_slider, my_btn_sound_slider);
+
+            jmp_rep((LPVOID) real_vsnprintf, my_vsnprintf);
+
+//            BYTE opcode[16];
+
+            /*word_strtrait*/
+//            opcode[0] = 0x83;
+//            opcode[1] = 0xFF;
+//            opcode[2] = 0x3F;
+//            asm_opcode_rep((LPVOID)0x488DA3, opcode, 3);
+/*
+
+            *//*btn_perk*//*
+            asm_rep_ex((void *) 0x488F68,1,&my_perks);
+
+            asm_rep_ex((void *) 0x488FFC,1,&my_perks);
+
+
+            *//*btn_perk_page*//*
+            opcode[0] = 0x83;
+            opcode[1] = 0xFA;
+            opcode[2] = 0x38;
+            asm_opcode_rep((LPVOID)0x488D2A, opcode, 3);
+
+            *//*layout_4*//*
+            asm_rep_ex((void *) 0x4889DD,3,&my_perks);
+
+            asm_rep_ex((void *) 0x488A4B,3,&my_perks);
+
+
+            *//*perk_info*//*
+            memcpy(opcode, (void *) 0x48942E, 6);
+            asm_rep((LPVOID)0x48942E, opcode, 2, &my_perks);
+
+            memcpy(opcode, (void *) 0x489417, 6);
+            asm_rep((LPVOID)0x489417, opcode, 2, &my_perks);
+
+
+            *//*perkntrait_find*//*
+            memcpy(opcode, (void *) 0x4891E8, 6);
+            asm_rep((LPVOID)0x4891E8, opcode, 2, &my_perks);
+
+
+            *//*script_perk_config*//*
+//            memcpy(opcode, (void *) 0x4892AC, 7);
+//            asm_rep((LPVOID)0x4892AC, opcode, 3, &my_perks);
+
+
+            *//*word_perks_init*//*
+            jmp_rep((LPVOID) 0x4887B0, my_word_perks_init);
+
+
+            *//*word_strperk*//*
+            memcpy(opcode, (void *) 0x488EB2, 6);
+            asm_rep((LPVOID)0x488EB2, opcode, 2, &my_perks);
+
+            memcpy(opcode, (void *) 0x488E3F, 5);
+            asm_rep((LPVOID)0x488E3F, opcode, 1, &my_perks);
+
+            opcode[0] = 0x83;
+            opcode[1] = 0xFF;
+            opcode[2] = 0x3F;
+            asm_opcode_rep((LPVOID)0x488E63, opcode, 3);
+
+
+
+            *//*word_strtrait*//*
+            opcode[0] = 0x83;
+            opcode[1] = 0xFF;
+            opcode[2] = 0x3F;
+            asm_opcode_rep((LPVOID)0x488DA3, opcode, 3);
+
+            *//*perks和trait的距离是9992*//*
+            memcpy(opcode, (void *) 0x488DF2, 6);
+            asm_rep((LPVOID)0x488DF2, opcode, 2, &my_perks[2498*2]);
+
+            memcpy(opcode, (void *) 0x488D7F, 5);
+            asm_rep((LPVOID)0x488D7F, opcode, 1, &my_perks[2498*2]);
+
+            *//*trait_info*//*
+            asm_rep_ex((void *) 0x489457,2,&my_perks[2498*2]);
+            asm_rep_ex((void *) 0x48946E,2,&my_perks[2498*2]);
+
+            *//*btn_perk*//*
+            asm_rep_ex((void *) 0x48902A,1,&my_perks[2498*2]);*/
+            /*0x872D78 - 0x870540 = 0x2838 = 10296/4*/
+            /*意义不明的地址在trait的后76位, 暂时进行替换, 不知道是不是正确的?*/
+//            asm_rep_ex((void *) 0x489057,2,&my_perks[2498*2+76]);
+
+            /*2708置换*/
+            /*perkntrait_find*/
+//            asm_rep_ex((void *)0x4891E2,2,(void *)0x4E10);
+            /*btn_perk_page*/
+//            asm_rep_ex((void *)0x488D0D,2,(void *)0x4E10);
+            /*layout_4*/
+//            asm_rep_ex((void *)0x488AE8,2,(void *)0x4E10);
+//            asm_rep_ex((void *)0x488ADC,2,(void *)0x4E10);
+//            asm_rep_ex((void *)0x488A87,2,(void *)0x4E10);
+//            asm_rep_ex((void *)0x488A45,2,(void *)0x4E10);
+//            asm_rep_ex((void *)0x4889C3,2,(void *)0x4E10);
+//            asm_rep_ex((void *)0x48895E,2,(void *)0x4E10);
+            /**/
+
+
+            /*特性: 872C48*/
+
+            /*特性:    872C48*/
+
+            /*特性数量: 875348*/
+
+            /*天赋数量: 872C40*/
             //end
 
             break;

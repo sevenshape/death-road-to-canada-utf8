@@ -51,13 +51,13 @@ add_custom_command(TARGET SDL2_mixer POST_BUILD
 target_link_libraries(SDL2_mixer opengl32 ${GETTEXT_LIBRARY} ${libiconv_LIBRARY} ${PNG_LIBRARIES})
 
 # test_utf8构建和链接
-add_executable(test_utf8 test_utf8.c)
-target_link_libraries(test_utf8 opengl32 ${GETTEXT_LIBRARY} GLEW::GLEW Freetype::Freetype ${libiconv_LIBRARY})
+#add_executable(test_utf8 test_utf8.c)
+#target_link_libraries(test_utf8 opengl32 ${GETTEXT_LIBRARY} GLEW::GLEW Freetype::Freetype ${libiconv_LIBRARY})
 
 # test_utf8构建和链接
-add_executable(test_tex_union test_tex_union.c)
-target_link_libraries(test_tex_union GLEW::GLEW glfw GLUT::GLUT Freetype::Freetype ${PNG_LIBRARIES})
+#add_executable(test_tex_union test_tex_union.c)
+#target_link_libraries(test_tex_union GLEW::GLEW glfw GLUT::GLUT Freetype::Freetype ${PNG_LIBRARIES})
 
 # test_utf8构建和链接
-add_executable(test_tex_ascii test_tex_ascii.c)
-target_link_libraries(test_tex_ascii GLEW::GLEW glfw Freetype::Freetype)
+#add_executable(test_tex_ascii test_tex_ascii.c)
+#target_link_libraries(test_tex_ascii GLEW::GLEW glfw Freetype::Freetype)
