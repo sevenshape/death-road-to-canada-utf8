@@ -6,10 +6,6 @@
 #include <libintl.h>
 #include <iconv.h>
 #include <png.h>
-#include <windows.h>
-
-#define LODWORD(l) ((DWORD)(((DWORDLONG)(l)) & 0xffffffff))
-#define SHIDWORD(ll) ((DWORD)(((ll) >> 32) & 0xFFFFFFFF))
 
 #define _(STRING) gettext(STRING)
 
@@ -1402,113 +1398,78 @@ void __cdecl my_sprite_batch_draw(int a1)
 const char *(__cdecl *fs_pop_string)(char *a1) =
 (const char *(__cdecl *)(char *)) 0x00425670;
 
-int *dword_875348 = (int *) 0x00875348;
-char *Str2_temp = (char *) 0x00872C48;
 int *curperk = (int *) 0x00870528;
+char descperk[0x9C00];
 
-int(__cdecl *defer_err_bleep)() =
-(int(__cdecl *)()) 0x004751A0;
-
-
-const char *(__cdecl *script_abort)(const char *Format, ...) =
-(const char *(__cdecl *)(const char *Format, ...)) 0x0048FA70;
-
-const char *(__cdecl *word_strtrait)(char *a1) =
-(const char *(__cdecl *)(char *)) 0x00488D60;
-
-char *__cdecl my_word_strtrait(char *a1)
+const char *__cdecl my_word_strdesc_0(char *a1)
 {
-    const char *v1; // eax
-    int v2; // edi
-    const char *Str1; // ebp
-    const char *Str2; // ebx
-    int v5; // esi
     char *result; // eax
-    char *v7; // eax
-    char *v8; // edi
+    int v2; // ebx
 
-    v1 = fs_pop_string(a1);
-    v2 = *dword_875348;
-    Str1 = v1;
-    if ( *dword_875348 <= 0 )
+    result = (char *)fs_pop_string(a1);
+    v2 = *curperk;
+    if ( *curperk )
     {
-        LABEL_8:
-        v8 = &Str2_temp[312 * v2];
-        *curperk = (int)v8;
-        result = strncpy(v8, Str1, 0x28u);
-        v8[39] = 0;
-        ++*dword_875348;
+//        result = strncpy((char *)(*curperk + 40), result, 0x100u);
+        int v1 = (*curperk - 0x870540)/0x9c;
+        result = strncpy((char *)(descperk + v1 * 0x138 + 40), result, 0x100u);
+        *(BYTE *)(v2 + 295) = 0;
     }
-    else
-    {
-        Str2 = Str2_temp;
-        v5 = 0;
+    return result;
+}
+
+char * my_do_perk_desc() {
+    int a1;
+
+    // 将 EAX 的值移动到 eax_value 变量中
+    __asm__ volatile (
+            "movl %%eax, %0"
+            : "=r" (a1)  // 输出：将 eax 存入变量
+            :                   // 输入：无
+            :                   // 破坏列表：无
+            );
+
+    int v4; // ecx
+    unsigned int v6; // edx
+    int v7; // eax
+    unsigned int v8; // eax
+    char Buffer[12]; // [esp+10h] [ebp-18h] BYREF
+    __int16 v11; // [esp+1Ch] [ebp-Ch] BYREF
+
+    __int16 *(__cdecl * cyoa_just_ok)(char *Source) = (__int16 *(__cdecl * )(char *Source))0x434100;
+    __int16 *(__cdecl * cyoa_set_choice_text)(char *Source) = (__int16 *(__cdecl * )(char *Source))0x433D90;
+    int (__cdecl * cyoa_yesno)(char *Source, char *a2, char *a3, int a4) = (int (__cdecl * )(char *Source, char *a2, char *a3, int a4))0x4341A0;
+    int (__cdecl * perkpick)(int a1) = (int (__cdecl * )(int a1))0x488CB0;
+    int (__cdecl * cyoa_set_fade)(int a1) = (int (__cdecl * )(int a1))0x433C50;
+    int (__cdecl * cyoa_set_clickspeed)(int a1) = (int (__cdecl * )(int a1))0x433C60;
+    char *(__cdecl * cyoa_set_title)(char *Source) = (char *(__cdecl * )(char *Source))0x433C70;
+
+
+    v4 = *(DWORD * )(a1 + 0x94);
+    *curperk = a1;
+    int v1 = (*curperk - 0x870540)/0x9c;
+    if (v4) {
+        cyoa_just_ok((char *)(descperk + v1 * 0x138 + 40));
+        cyoa_set_choice_text("Nuts");
+    } else {
+        cyoa_yesno((char *)(descperk + v1 * 0x138 + 40), "Good", "Nope", (int)perkpick);
+    }
+    cyoa_set_fade(1);
+    cyoa_set_clickspeed(1);
+    if (perks_selected)
+        return cyoa_set_title((char *) a1);
+    v6 = 3;
+    v11 = -19276;
+    v7 = *(DWORD * )(a1 + 0x8c);
+    if (v7 > 1 || (v6 = v7 + 1, v7 != -1)) {
+        v8 = 0;
         do
-        {
-            result = (char *)strcmp(Str1, Str2);
-            if ( !result )
-            {
-                *curperk = (int)Str2;
-                return result;
-            }
-            ++v5;
-            Str2 += 312;
-        }
-        while ( v2 != v5 );
-        if ( v2 <= 64 )
-            goto LABEL_8;
-        *curperk = 0;
-        defer_err_bleep();
-        return script_abort("OUT OF TRAIT SPACE\n");
+            *((BYTE * ) & v11 + v8++) = 28;
+        while (v8 < v6);
     }
-    return result;
-}
-
-
-const char *(__cdecl *word_strperk)(char *a1) =
-(const char *(__cdecl *)(char *)) 0x00488E20;
-
-
-
-
-
-
-
-int * perk_pick_callback = (int*)0x870520;
-
-void *my_word_perks_init()
-{
-    void *result; // eax
-
-    memset(my_perks, 0, 9992+312*64);
-    result = memset(perks, 0, 0x4E10u);
-    *curperk = 0;
-    *perks_selected = 0;
-    *perk_pick_callback = 0;
-    return result;
-}
-
-
-int(__cdecl *layout_4)(int a1) =
-(int(__cdecl *)(int)) 0x00488940;
-
-int __cdecl my_btn_perk_page(int a1, int a2)
-{
-    char *v3; // eax
-    int v4; // edx
-
-    if ( a2 != 3 )
-        return main_btn_framed(a1, a2);
-
-    v3 = &perks[9992 * (*perks_selected & 1)];
-    v4 = ~((*((DWORD *)v3 + 2497) + 8 * *(DWORD *)(a1 + 4)) >> 31) & (*((DWORD *)v3 + 2497) + 8 * *(DWORD *)(a1 + 4));
-
-    if ( v4 > 24 )
-        v4 = 24;
-    *((DWORD *)v3 + 2497) = v4;
-    main_btn_framed(a1, 3);
-    layout_4(*(DWORD *)(a1 + 4));
-    return 1;
+    sprintf(Buffer, "%s %s", (const char *) a1, (const char *) &v11);
+    return cyoa_set_title(Buffer);
+>>>>>>> 061c753 (Clean up: remove steam_wrapper.c and test_utf8.c, update .gitignore)
 }
 
 // DLL被加载、卸载时调用
@@ -1598,115 +1559,142 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 
             jmp_rep((LPVOID) real_vsnprintf, my_vsnprintf);
 
-//            BYTE opcode[16];
 
-            /*word_strtrait*/
-//            opcode[0] = 0x83;
-//            opcode[1] = 0xFF;
-//            opcode[2] = 0x3F;
-//            asm_opcode_rep((LPVOID)0x488DA3, opcode, 3);
+            jmp_rep((LPVOID) 0x488B90, (LPVOID) my_do_perk_desc);
+
+            BYTE opcode[16];
+/*console处理把e7 e8闪烁改为e7 1f闪烁, 因为e8已被插件占用*/
+            opcode[0] = 0xF0;
+            asm_opcode_rep((LPVOID) (0x4D335A + 0), opcode, 1);
+
+
+/*1.desc转移: 替换perk的$desc方法, 把文本转移到其他地方*/
+            jmp_rep((LPVOID) 0x4888C0, my_word_strdesc_0);
+
+/* 扩大perk限制数字:
+ * word_strperk
+ *   488e63:	83 ff 1f             	cmp    $0x1f,%edi
+ * word_strtrait
+ *   488da3:	83 ff 20             	cmp    $0x20,%edi
+ * btn_perk_page
+ *   488d2a:	83 fa 18             	cmp    $0x18,%edx
+ *   488d2f:	ba 18 00 00 00       	mov    $0x18,%edx
+ *   */
+            /*1. 继续增加perk的判断改为小于等于63*/
+            opcode[0] = 0x3F;
+
+            asm_opcode_rep((LPVOID) (0x488e63 + 2), opcode, 1);
+            asm_opcode_rep((LPVOID) (0x488da3 + 2), opcode, 1);
+
+            /* 2. 可以继续翻页的判断改为56 */
+            opcode[0] = 0x38;
+
+            asm_opcode_rep((LPVOID) (0x488d2a + 2), opcode, 1);
+            asm_opcode_rep((LPVOID) (0x488d2f + 1), opcode, 1);
+
+/* 特殊间隔更改
+ * btn_perk  trait的锁定0x130寻址采用基址偏移寻址, 改为0x94就是0x872CDC( 0x872d78 - (0x130 - 0x94) )
+ *   489057:	8b 80 78 2d 87 00    	mov    0x872d78(%eax),%eax           */
+
+            opcode[0] = 0xDC;
+            opcode[1] = 0x2C;
+            opcode[2] = 0x87;
+
+            asm_opcode_rep((LPVOID) (0x489057 + 2), opcode, 3);
 /*
+2.间隔修改: 修改word_strperk和word_str的间隔为0x9c
+word_strperk
+  488e59:	81 c3 38 01 00 00    	add    $0x138,%ebx
+  488ea0:	69 ff 38 01 00 00    	imul   $0x138,%edi,%edi
+word_strtrait
+  488d99:	81 c3 38 01 00 00    	add    $0x138,%ebx
+  488de0:	69 ff 38 01 00 00    	imul   $0x138,%edi,%edi
+perk_info
+  489411:	69 d2 38 01 00 00    	imul   $0x138,%edx,%edx
+  489428:	69 d2 38 01 00 00    	imul   $0x138,%edx,%edx
+trait_info
+  489451:	69 d2 38 01 00 00    	imul   $0x138,%edx,%edx
+  489468:	69 d2 38 01 00 00    	imul   $0x138,%edx,%edx
+layout
+  4889a7:	69 ef 38 01 00 00    	imul   $0x138,%edi,%ebp
+  488a5e:	81 c5 38 01 00 00    	add    $0x138,%ebp
+btn_perk
+  488f62:	69 c2 38 01 00 00    	imul   $0x138,%edx,%eax
+  调用do_perk_desc使用的间隔
+    488ff6:	69 c2 38 01 00 00    	imul   $0x138,%edx,%eax
+    489024:	69 c2 38 01 00 00    	imul   $0x138,%edx,%eax
+  489051:	69 c2 38 01 00 00    	imul   $0x138,%edx,%eax
+perkntrait_find
+  48920d:	81 c3 38 01 00 00    	add    $0x138,%ebx
+*/
+            opcode[0] = 0x9c;
+            opcode[1] = 0x00;
 
-            *//*btn_perk*//*
-            asm_rep_ex((void *) 0x488F68,1,&my_perks);
+            asm_opcode_rep((LPVOID) (0x488e59 + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x488ea0 + 2), opcode, 2);
 
-            asm_rep_ex((void *) 0x488FFC,1,&my_perks);
+            asm_opcode_rep((LPVOID) (0x488d99 + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x488de0 + 2), opcode, 2);
 
+            asm_opcode_rep((LPVOID) (0x489411 + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x489428 + 2), opcode, 2);
 
-            *//*btn_perk_page*//*
-            opcode[0] = 0x83;
-            opcode[1] = 0xFA;
-            opcode[2] = 0x38;
-            asm_opcode_rep((LPVOID)0x488D2A, opcode, 3);
+            asm_opcode_rep((LPVOID) (0x489451 + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x489468 + 2), opcode, 2);
 
-            *//*layout_4*//*
-            asm_rep_ex((void *) 0x4889DD,3,&my_perks);
+            asm_opcode_rep((LPVOID) (0x4889a7 + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x488a5e + 2), opcode, 2);
 
-            asm_rep_ex((void *) 0x488A4B,3,&my_perks);
+            asm_opcode_rep((LPVOID) (0x488f62 + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x488ff6 + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x489024 + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x489051 + 2), opcode, 2);
 
+            asm_opcode_rep((LPVOID) (0x48920d + 2), opcode, 2);
+/*3.level转移: 修改word_lvl和do_perk_desc等级的间隔为0x8c
+word_lvl
+  4888ae:	89 81 28 01 00 00    	mov    %eax,0x128(%ecx)
+do_perk_desc
+  488c21:	8b 83 28 01 00 00    	mov    0x128(%ebx),%eax
+btn_perk
+  488f7b:	8b 80 28 01 00 00    	mov    0x128(%eax),%eax*/
+            opcode[0] = 0x8c;
+            opcode[1] = 0x00;
 
-            *//*perk_info*//*
-            memcpy(opcode, (void *) 0x48942E, 6);
-            asm_rep((LPVOID)0x48942E, opcode, 2, &my_perks);
+            asm_opcode_rep((LPVOID) (0x4888ae + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x488c21 + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x488f7b + 2), opcode, 2);
+/*4.锁定转移: 修改word_lock和do_perk_desc锁定的间隔为0x94
+word_lock
+  488879:	89 82 30 01 00 00    	mov    %eax,0x130(%edx)
+do_perk_desc
+  488bb0:	8b 8b 30 01 00 00    	mov    0x130(%ebx),%ecx
+charmake_roll_a_char
+  42c700:	8b 90 30 01 00 00    	mov    0x130(%eax),%edx
+  42c737:	8b 80 30 01 00 00    	mov    0x130(%eax),%eax
+btn_perk
+  488f6d:	8b b0 30 01 00 00    	mov    0x130(%eax),%esi*/
+            opcode[0] = 0x94;
+            opcode[1] = 0x00;
+            asm_opcode_rep((LPVOID) (0x488879 + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x488bb0 + 2), opcode, 2);
 
-            memcpy(opcode, (void *) 0x489417, 6);
-            asm_rep((LPVOID)0x489417, opcode, 2, &my_perks);
+            asm_opcode_rep((LPVOID) (0x42c700 + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x42c737 + 2), opcode, 2);
 
+            asm_opcode_rep((LPVOID) (0x488f6d + 2), opcode, 2);
+/*
+5.修改word_applyword_0和perkfinder的间隔为0x98
+word_applyword_0
+  488849:	89 82 34 01 00 00    	mov    %eax,0x134(%edx)
+perkfinder
+  4901f1:	8b 80 34 01 00 00    	mov    0x134(%eax),%eax*/
+            opcode[0] = 0x98;
+            opcode[1] = 0x00;
+            asm_opcode_rep((LPVOID) (0x488849 + 2), opcode, 2);
+            asm_opcode_rep((LPVOID) (0x4901f1 + 2), opcode, 2);
 
-            *//*perkntrait_find*//*
-            memcpy(opcode, (void *) 0x4891E8, 6);
-            asm_rep((LPVOID)0x4891E8, opcode, 2, &my_perks);
-
-
-            *//*script_perk_config*//*
-//            memcpy(opcode, (void *) 0x4892AC, 7);
-//            asm_rep((LPVOID)0x4892AC, opcode, 3, &my_perks);
-
-
-            *//*word_perks_init*//*
-            jmp_rep((LPVOID) 0x4887B0, my_word_perks_init);
-
-
-            *//*word_strperk*//*
-            memcpy(opcode, (void *) 0x488EB2, 6);
-            asm_rep((LPVOID)0x488EB2, opcode, 2, &my_perks);
-
-            memcpy(opcode, (void *) 0x488E3F, 5);
-            asm_rep((LPVOID)0x488E3F, opcode, 1, &my_perks);
-
-            opcode[0] = 0x83;
-            opcode[1] = 0xFF;
-            opcode[2] = 0x3F;
-            asm_opcode_rep((LPVOID)0x488E63, opcode, 3);
-
-
-
-            *//*word_strtrait*//*
-            opcode[0] = 0x83;
-            opcode[1] = 0xFF;
-            opcode[2] = 0x3F;
-            asm_opcode_rep((LPVOID)0x488DA3, opcode, 3);
-
-            *//*perks和trait的距离是9992*//*
-            memcpy(opcode, (void *) 0x488DF2, 6);
-            asm_rep((LPVOID)0x488DF2, opcode, 2, &my_perks[2498*2]);
-
-            memcpy(opcode, (void *) 0x488D7F, 5);
-            asm_rep((LPVOID)0x488D7F, opcode, 1, &my_perks[2498*2]);
-
-            *//*trait_info*//*
-            asm_rep_ex((void *) 0x489457,2,&my_perks[2498*2]);
-            asm_rep_ex((void *) 0x48946E,2,&my_perks[2498*2]);
-
-            *//*btn_perk*//*
-            asm_rep_ex((void *) 0x48902A,1,&my_perks[2498*2]);*/
-            /*0x872D78 - 0x870540 = 0x2838 = 10296/4*/
-            /*意义不明的地址在trait的后76位, 暂时进行替换, 不知道是不是正确的?*/
-//            asm_rep_ex((void *) 0x489057,2,&my_perks[2498*2+76]);
-
-            /*2708置换*/
-            /*perkntrait_find*/
-//            asm_rep_ex((void *)0x4891E2,2,(void *)0x4E10);
-            /*btn_perk_page*/
-//            asm_rep_ex((void *)0x488D0D,2,(void *)0x4E10);
-            /*layout_4*/
-//            asm_rep_ex((void *)0x488AE8,2,(void *)0x4E10);
-//            asm_rep_ex((void *)0x488ADC,2,(void *)0x4E10);
-//            asm_rep_ex((void *)0x488A87,2,(void *)0x4E10);
-//            asm_rep_ex((void *)0x488A45,2,(void *)0x4E10);
-//            asm_rep_ex((void *)0x4889C3,2,(void *)0x4E10);
-//            asm_rep_ex((void *)0x48895E,2,(void *)0x4E10);
-            /**/
-
-
-            /*特性: 872C48*/
-
-            /*特性:    872C48*/
-
-            /*特性数量: 875348*/
-
-            /*天赋数量: 872C40*/
-            //end
+>>>>>>> 061c753 (Clean up: remove steam_wrapper.c and test_utf8.c, update .gitignore)
 
             break;
         case DLL_PROCESS_DETACH:

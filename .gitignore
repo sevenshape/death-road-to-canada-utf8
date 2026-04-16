@@ -1,2 +1,7 @@
 # 项目排除路径
 /cmake-build-mingw32-ninja/
+/cmake-build-debug/
+/.idea/
+steam_wrapper.c
+test_utf8.c
+zpix.ttf
