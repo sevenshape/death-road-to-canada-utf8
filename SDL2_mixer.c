@@ -1469,7 +1469,6 @@ char * my_do_perk_desc() {
     }
     sprintf(Buffer, "%s %s", (const char *) a1, (const char *) &v11);
     return cyoa_set_title(Buffer);
->>>>>>> 061c753 (Clean up: remove steam_wrapper.c and test_utf8.c, update .gitignore)
 }
 
 // DLL被加载、卸载时调用
@@ -1694,7 +1693,6 @@ perkfinder
             asm_opcode_rep((LPVOID) (0x488849 + 2), opcode, 2);
             asm_opcode_rep((LPVOID) (0x4901f1 + 2), opcode, 2);
 
->>>>>>> 061c753 (Clean up: remove steam_wrapper.c and test_utf8.c, update .gitignore)
 
             break;
         case DLL_PROCESS_DETACH:
